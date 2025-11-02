@@ -2,113 +2,100 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Paleta de Cores Art Licor - Implementação v1 */
+/* Paleta de Cores LENAMOM - P&B Moderno (Ajuste de Contraste) */
 
 @layer base {
   :root {
-    /* Cores Base: Bege e Marrom */
-    --background: 48 33% 94%; /* #F5F5DC Bege Claro/Creme (um pouco mais dessaturado) */
-    --foreground: 21 47% 25%; /* #5C3A21 Marrom Escuro */
+    /* Cores Base: Branco e Cinza Escuro */
+    --background: 0 0% 100%; /* Branco */
+    --foreground: 240 10% 3.9%; /* Cinza bem escuro, quase preto */
 
-    /* Cards e Popovers: Um tom mais claro que o fundo para se destacar */
-    --card: 48 33% 98%; /* Quase branco, derivado do bege */
-    --card-foreground: 21 47% 25%;
+    /* Cards e Popovers: Um cinza muito sutil para separação */
+    --card: 0 0% 99%;
+    --card-foreground: 240 10% 3.9%;
 
-    --popover: 48 33% 98%;
-    --popover-foreground: 21 47% 25%;
+    --popover: 0 0% 99%;
+    --popover-foreground: 240 10% 3.9%;
 
-    /* Cor Primária: Laranja Queimado */
-    --primary: 22 81% 53%; /* #E86725 */
-    --primary-foreground: 0 0% 100%; /* Branco para contraste */
+    /* Cor Primária: Cinza escuro para botões e destaques */
+    --primary: 240 10% 3.9%;
+    --primary-foreground: 0 0% 98%; /* Texto quase branco para contraste */
 
-    /* Cores Secundárias e de Apoio */
-    --secondary: 22 81% 95%; /* Laranja bem claro */
-    --secondary-foreground: 22 81% 53%;
+    /* Cores Secundárias e de Apoio (AJUSTADAS PARA MAIS CONTRASTE) */
+    --secondary: 0 0% 94%; /* Cinza mais visível para fundos */
+    --secondary-foreground: 240 10% 3.9%;
 
-    --muted: 48 33% 90%; /* Bege um pouco mais escuro */
-    --muted-foreground: 21 47% 45%; /* Marrom mais suave */
+    --muted: 0 0% 90%; /* Cinza para elementos desabilitados */
+    --muted-foreground: 240 3.8% 50%; /* Texto suave mais escuro */
 
-    --accent: 22 81% 92%; /* Laranja mais claro ainda */
-    --accent-foreground: 22 81% 53%;
+    --accent: 0 0% 92%; /* Cinza mais forte para hovers */
+    --accent-foreground: 240 10% 3.9%;
 
     /* Cores Semânticas */
-    --success: 122 39% 40%; /* #4CAF50 Verde Cacto (um pouco mais escuro para contraste) */
+    --success: 142.1 76.2% 36.3%;
     --success-foreground: 0 0% 100%;
-
-    --warning: 38 92% 50%; /* Amarelo/Âmbar padrão */
-    --warning-foreground: 21 47% 25%;
-
-    --destructive: 0 72% 51%; /* Vermelho padrão para erros */
-    --destructive-foreground: 0 0% 100%;
+    --warning: 47.9 95.8% 53.1%;
+    --warning-foreground: 240 10% 3.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
     /* Bordas e Inputs */
-    --border: 48 33% 85%;
-    --input: 48 33% 85%;
-    --ring: 22 81% 53%; /* Laranja */
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 240 10% 3.9%;
 
     --radius: 0.5rem;
 
-    /* Barra Lateral com Identidade Forte */
-    --sidebar-background: 21 47% 25%; /* #5C3A21 Marrom Escuro */
-    --sidebar-foreground: 48 33% 85%;   /* Texto Bege */
-    --sidebar-primary: 22 81% 53%;      /* #E86725 Laranja para item ativo */
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 21 47% 35%;       /* Marrom um pouco mais claro para hover */
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 21 47% 20%;
-    --sidebar-ring: 22 81% 53%;
+    /* Barra Lateral com Identidade Forte (AJUSTADA) */
+    --sidebar-background: 240 10% 3.9%; /* Fundo Preto */
+    --sidebar-foreground: 0 0% 98%;   /* Texto Branco */
+    --sidebar-primary: 0 0% 85%;      /* Item ativo com fundo cinza-médio (prata) */
+    --sidebar-primary-foreground: 240 10% 3.9%; /* Texto do item ativo preto */
+    --sidebar-accent: 240 4% 20%;       /* Hover com cinza escuro */
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 15%;
+    --sidebar-ring: 0 0% 98%;
   }
 
   .dark {
-    /* Cores Base: Marrom super escuro e Bege */
-    --background: 21 47% 10%;
-    --foreground: 48 33% 94%;
+    /* Tema Escuro: Inverte a lógica, com cinzas escuros como base */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
 
-    /* Cards e Popovers */
-    --card: 21 47% 15%;
-    --card-foreground: 48 33% 94%;
+    --card: 240 4% 10%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 21 47% 15%;
-    --popover-foreground: 48 33% 94%;
+    --popover: 240 4% 10%;
+    --popover-foreground: 0 0% 98%;
 
-    /* Cor Primária: Laranja mais brilhante para contraste */
-    --primary: 22 81% 60%;
-    --primary-foreground: 21 47% 10%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 10% 3.9%;
 
-    /* Cores Secundárias e de Apoio */
-    --secondary: 22 81% 20%;
-    --secondary-foreground: 48 33% 94%;
+    --secondary: 240 4% 15%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 21 47% 20%;
-    --muted-foreground: 48 33% 70%;
+    --muted: 240 4% 15%;
+    --muted-foreground: 240 5% 64.9%;
 
-    --accent: 22 81% 25%;
-    --accent-foreground: 48 33% 94%;
+    --accent: 240 4% 15%;
+    --accent-foreground: 0 0% 98%;
 
-    /* Cores Semânticas */
-    --success: 122 39% 49%;
-    --success-foreground: 21 47% 10%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
 
-    --warning: 38 92% 50%;
-    --warning-foreground: 21 47% 10%;
+    --border: 240 4% 15%;
+    --input: 240 4% 15%;
+    --ring: 0 0% 98%;
 
-    --destructive: 0 63% 47%;
-    --destructive-foreground: 48 33% 94%;
-
-    /* Bordas e Inputs */
-    --border: 21 47% 20%;
-    --input: 21 47% 20%;
-    --ring: 22 81% 60%;
-
-    /* Barra Lateral */
-    --sidebar-background: 21 47% 15%;
-    --sidebar-foreground: 48 33% 94%;
-    --sidebar-primary: 22 81% 60%;
-    --sidebar-primary-foreground: 21 47% 10%;
-    --sidebar-accent: 22 81% 20%;
-    --sidebar-accent-foreground: 48 33% 94%;
-    --sidebar-border: 21 47% 12%;
-    --sidebar-ring: 22 81% 60%;
+    /* Barra Lateral no modo escuro (AJUSTADA) */
+    --sidebar-background: 240 10% 3.9%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 240 4% 25%; /* Fundo do item ativo cinza-escuro */
+    --sidebar-primary-foreground: 0 0% 98%; /* Texto do item ativo branco */
+    --sidebar-accent: 240 4% 20%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 240 4% 15%;
+    --sidebar-ring: 0 0% 98%;
   }
 }
 

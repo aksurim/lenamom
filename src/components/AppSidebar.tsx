@@ -9,7 +9,7 @@ import {
   Settings,
   ChevronDown,
   Truck,
-  DollarSign, // Importando o ícone DollarSign para o caixa
+  DollarSign,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -43,11 +43,10 @@ const allMenuItems: MenuItem[] = [
   { title: "Clientes", url: "/customers", icon: Users },
   { title: "Formas de Pagamento", url: "/payment-methods", icon: CreditCard },
   { title: "Vendas", url: "/sales", icon: ShoppingCart },
-  { title: "Movimento de Caixa", url: "/cash-movements", icon: DollarSign }, // Adicionado o item de menu para Movimento de Caixa
+  { title: "Movimento de Caixa", url: "/cash-movements", icon: DollarSign },
   {
     title: "Relatórios",
     icon: FileText,
-    // Alteração: Removendo adminOnly: true para permitir acesso a todos os usuários logados
     subItems: [
       { title: "Histórico de Vendas", url: "/reports/sales-history" },
       { title: "Vendas por Produto", url: "/reports/sales-by-product" },
@@ -71,13 +70,14 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarContent>
-        <div className="flex items-center justify-center p-4 border-b">
-          <NavLink to="/">
-            <img src="/logo.png" alt="Art Licor Logo" className="h-16 w-auto" />
-          </NavLink>
-        </div>
+      {/* CORREÇÃO: Divisão do cabeçalho do logo e do conteúdo do menu */}
+      <div className="bg-white p-4 flex items-center justify-center">
+        <NavLink to="/">
+          <img src="/logo.png" alt="LENAMOM Logo" className="h-16 w-auto" />
+        </NavLink>
+      </div>
 
+      <SidebarContent className="flex-grow">
         <SidebarGroup>
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -85,7 +85,6 @@ export function AppSidebar() {
               {menuItems.map((item) => (
                 item.subItems ? (
                   <Collapsible key={item.title} asChild defaultOpen className="group/collapsible">
-                    {/* CORREÇÃO: SidebarMenuItem deve envolver CollapsibleTrigger e CollapsibleContent */}
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton tooltip={item.title}>
