@@ -4,7 +4,6 @@ const pool = require('../db');
 const { protect, admin } = require('../middleware/authMiddleware');
 const { logAction } = require('../services/auditLogService');
 
-// --- Função para Geração de Código de Barras EAN-13 ---
 function generateEAN13(base_code) {
   if (String(base_code).length !== 12) throw new Error("A base para o EAN-13 deve ter 12 dígitos.");
   let sum = 0;
@@ -14,6 +13,79 @@ function generateEAN13(base_code) {
   const checkDigit = (10 - (sum % 10)) % 10;
   return base_code + checkDigit;
 }
+
+// ROTA COM O LAYOUT FINAL E DEFINITIVO
+router.post('/generate-label', protect, async (req, res) => {
+    const { productId } = req.body;
+    if (!productId) {
+        return res.status(400).json({ message: 'O ID do produto é obrigatório.' });
+    }
+
+    try {
+        const [[product]] = await pool.query('SELECT code, description, barcode, sale_price FROM products WHERE id = ?', [productId]);
+        if (!product) {
+            return res.status(404).json({ message: 'Produto não encontrado.' });
+        }
+
+        const formattedPrice = `R$ ${parseFloat(product.sale_price).toFixed(2).replace('.', ',')}`;
+
+        // Definições de Layout Finais
+        const col1_Y = 0;
+        const col2_Y = 120;
+
+        const line1_X = 20;
+        const line2_X = 50;
+        const line3_X = 75;
+
+        const maxChars = 22;
+
+        // Montagem do Comando TSPL
+        let tspl = '';
+        tspl += 'SIZE 60 mm, 12 mm\r\n';
+        tspl += 'GAP 2 mm, 0 mm\r\n';
+        tspl += 'CODEPAGE 850\r\n'; // Adicionado para suportar acentuação
+        tspl += 'REFERENCE 0,0\r\n';
+        tspl += 'DIRECTION 1\r\n';
+        tspl += 'CLS\r\n';
+
+        // --- Coluna 1 ---
+        tspl += `TEXT ${col1_Y}, ${line1_X}, "1", 0, 1, 2, "LENAMOM"\r\n`;
+        tspl += `TEXT ${col1_Y}, ${line3_X}, "1", 0, 1, 2, "${formattedPrice}"\r\n`;
+
+        // --- Coluna 2 ---
+        tspl += `BARCODE ${col2_Y}, ${line1_X}, "128", 25, 0, 0, 2, 4, "${product.code}"\r\n`;
+        tspl += `TEXT ${col2_Y}, ${line2_X}, "1", 0, 1, 1, "${product.code}"\r\n`;
+        tspl += `TEXT ${col2_Y}, ${line3_X}, "1", 0, 1, 1, "${product.description.substring(0, maxChars)}"\r\n`;
+
+        tspl += 'PRINT 1,1\r\n';
+
+        res.status(200).json({
+            tsplCommand: tspl,
+            labelData: { ...product, sale_price: formattedPrice }
+        });
+
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao gerar comando da etiqueta.', error: error.message });
+    }
+});
+
+// Rota para enviar o comando da etiqueta para a impressora (sem alterações)
+router.post('/send-label-command', protect, async (req, res) => {
+    const { tsplCommand, copies } = req.body;
+    if (!tsplCommand || !copies) {
+        return res.status(400).json({ message: 'O comando TSPL e o número de cópias são obrigatórios.' });
+    }
+    const numCopies = parseInt(copies, 10);
+    if (isNaN(numCopies) || numCopies <= 0) {
+        return res.status(400).json({ message: 'O número de cópias deve ser um número positivo.' });
+    }
+    try {
+        res.status(200).json({ message: `Comando recebido para ${numCopies} cópias. Envio via WebUSB é feito no cliente.` });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro no servidor.', error: error.message });
+    }
+});
+
 
 // GET /api/products - Rota pública para listar produtos
 router.get('/', async (req, res) => {
@@ -64,13 +136,11 @@ router.post('/', protect, async (req, res) => {
     const [result] = await connection.query('INSERT INTO products (code, description, unit, cost_price, sale_price, min_quantity, stock_quantity, supplier_id, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, TRUE)', [newCode, description, unit, parseFloat(cost_price), parseFloat(sale_price), parseInt(min_quantity), 0, parseInt(supplier_id)]);
     const newProductId = result.insertId;
 
-    // --- Geração do Código de Barras ---
-    const companyPrefix = '78989012'; // 8 dígitos (País + Empresa)
-    const productCode = String(newProductId).padStart(4, '0'); // 4 dígitos para o produto
-    const eanBase = companyPrefix + productCode;
+    const internalPrefix = '2811';
+    const productCode = String(newProductId).padStart(8, '0');
+    const eanBase = internalPrefix + productCode;
     const barcode = generateEAN13(eanBase);
     await connection.query('UPDATE products SET barcode = ? WHERE id = ?', [barcode, newProductId]);
-    // --- Fim da Geração ---
 
     await connection.commit();
     const [newProductRows] = await connection.query('SELECT * FROM products WHERE id = ?', [newProductId]);

@@ -8,17 +8,17 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Store, Archive, Building } from "lucide-react";
+import { Store, Archive, Building } from "lucide-react"; // Removido Printer
 import UsersSettings from "./Settings/Users";
 import AuditLogsSettings from "./Settings/AuditLogs";
 
+// Removido default_printer_type
 interface SettingsData {
   store_name?: string;
   stagnant_stock_days?: string;
-  // Campos da Empresa
   company_name?: string;
   cnpj?: string;
-  instagram?: string; // <-- Alterado de address para instagram
+  instagram?: string;
   contact?: string;
   logo_url?: string;
 }
@@ -86,10 +86,6 @@ function GeneralSettings() {
             <Label htmlFor="company_name">Nome da Empresa</Label>
             <Input id="company_name" value={settings.company_name || ""} onChange={handleInputChange} placeholder="LENAMOM JÓIAS E PERFUMARIA" />
           </div>
-          {/* <div>
-            <Label htmlFor="cnpj">CNPJ</Label>
-            <Input id="cnpj" value={settings.cnpj || ""} onChange={handleInputChange} placeholder="00.000.000/0001-00" />
-          </div> */}
           <div>
             <Label htmlFor="instagram">Instagram</Label>
             <Input id="instagram" value={settings.instagram || ""} onChange={handleInputChange} placeholder="@lenamom.joias" />
@@ -116,6 +112,8 @@ function GeneralSettings() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Card de Impressão Removido */}
 
       <Button type="submit" disabled={updateSettingsMutation.isPending}>
         {updateSettingsMutation.isPending ? 'Salvando...' : 'Salvar Configurações Gerais'}

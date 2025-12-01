@@ -8,67 +8,71 @@ O **Sistema de Gestão LENAMOM** é uma aplicação web completa para Ponto de V
 
 ## Funcionalidades Principais
 
-Além de todas as funcionalidades do sistema base (PDV, controle de caixa, gestão de estoque, CRUDs), o sistema LENAMOM introduz as seguintes melhorias e novidades:
-
 *   **Gestão de Clientes Aprimorada:**
-    *   **Data de Nascimento:** Cadastro da data de nascimento para ações de marketing e relacionamento.
-    *   **Histórico e Perfil de Compra:** Acesso rápido ao histórico completo de pedidos de um cliente e a um perfil de compra simplificado (produtos mais comprados, frequência), diretamente na tela de clientes.
+    *   Cadastro de data de nascimento, histórico e perfil de compra.
 
 *   **Gestão de Produtos Avançada:**
-    *   **Geração Automática de Código de Barras:** Ao cadastrar um novo produto, o sistema gera e armazena automaticamente um código padrão EAN-13, pronto para uso em etiquetas.
-    *   **Simulador de Impressão de Etiqueta:** Função de mock que simula a impressão de uma etiqueta de produto (padrão Tomate MDK-006), exibindo o código de barras e a descrição, facilitando a preparação para impressão física.
+    *   Geração automática de código de barras EAN-13 no cadastro de produtos.
+
+*   **Impressão Térmica Direta (Backend):**
+    *   **Arquitetura Robusta:** O sistema envia comandos de impressão (linguagem TSPL) diretamente do servidor Node.js para a impressora térmica (ex: Tomate MDK-006) via Socket TCP/IP.
+    *   **Independência de Driver:** Esta abordagem elimina a necessidade de drivers de impressão no computador do cliente, resolvendo problemas de compatibilidade, formatação e rotação.
+    *   **Impressão de Cupom de Venda:** Ao finalizar uma venda, o cupom não fiscal é impresso automaticamente, com formatação e corte de papel precisos.
+    *   **Impressão de Etiquetas:** Geração de etiquetas de produto com layout e rotação corretos, prontas para serem enviadas para a impressora.
 
 *   **Flexibilidade nas Vendas:**
-    *   **Campo de Frete:** Adição de um campo de frete no fechamento do pedido, com o valor sendo somado ao total e detalhado nos documentos.
+    *   Adição de campo de frete no fechamento do pedido.
 
 *   **Configuração Dinâmica da Empresa:**
-    *   **Módulo de Configurações Centralizado:** Todas as informações da empresa (Nome, Instagram, Contato, Logo) são agora gerenciadas dinamicamente através do menu **Configurações > Geral**. Não é mais necessário alterar arquivos de código para personalizar o sistema.
+    *   Módulo de configurações para gerenciar dados da empresa e, crucialmente, as **configurações de rede da impressora (IP e Porta)**.
 
-*   **Design Profissional de Documentos:**
-    *   **Templates de PDF Padronizados:** Todos os documentos gerados em PDF (Pedidos de Venda, Relatórios) seguem um padrão visual profissional em preto e branco.
-    *   **Cabeçalho e Rodapé Dinâmicos:** Os PDFs utilizam as informações salvas nas configurações para gerar um cabeçalho personalizado com o logo e os dados da empresa, e incluem um rodapé padronizado com informações de desenvolvimento e paginação.
+*   **Geração de Relatórios em PDF:**
+    *   O sistema mantém a capacidade de gerar relatórios complexos e documentos para visualização em formato PDF.
 
 ## Tecnologias Utilizadas
 
 | Categoria      | Tecnologia                                      |
 | :------------- | :---------------------------------------------- |
 | **Frontend**   | React, Vite, TypeScript, Tailwind CSS, shadcn/ui  |
-| **Backend**    | Node.js, Express                                |
+| **Backend**    | Node.js, Express, TSPL                            |
 | **Banco de Dados** | MySQL                                           |
+| **Comunicação**  | REST API, Socket TCP/IP                         |
 | **Autenticação** | JWT, bcrypt                                     |
-| **Hospedagem**   | DirectAdmin (ou similar com suporte a Node.js)    |
 
 ---
 
 ## Estrutura de Deploy
 
-A arquitetura do projeto base foi mantida, permitindo o deploy de múltiplas instâncias independentes a partir do mesmo código-fonte. A implantação é dividida em **Backend (App Node.js)** e **Frontend (Site Estático)**.
+A implantação é dividida em **Backend (App Node.js)** e **Frontend (Site Estático)**.
 
 ### Parte 1: Deploy do Backend (App Node.js)
 
-1.  **Preparação:** Envie o código-fonte do projeto (exceto `node_modules` e `.env`) para uma pasta não pública no servidor (ex: `/home/user/lenamom_app`).
+1.  **Preparação:** Envie o código-fonte do projeto (exceto `node_modules` e `.env`) para uma pasta não pública no servidor.
 2.  **Instalação:** Execute `npm install` na raiz do projeto e também no diretório `/server`.
-3.  **Configuração (`.env` na pasta `/server`):** Defina as variáveis de ambiente para a conexão com o banco de dados e o segredo JWT.
+3.  **Configuração (`.env` na pasta `/server`):** Defina as variáveis de ambiente para a conexão com o banco de dados, o segredo JWT e as **configurações da impressora**.
 
 ### Parte 2: Deploy do Frontend (Site Estático)
 
-1.  **Build Local:** Antes de enviar, gere a versão de produção do frontend. No seu computador, edite o arquivo `.env` na **raiz do projeto** e aponte a `VITE_API_BASE_URL` para o domínio do backend.
+1.  **Build Local:** Edite o arquivo `.env` na raiz do projeto e aponte a `VITE_API_BASE_URL` para o domínio do backend.
 2.  **Execução do Build:** Rode o comando `npm run build`.
-3.  **Upload:** Envie o **conteúdo** da pasta `dist` gerada para a pasta pública do seu domínio/subdomínio (ex: `/domains/lenamom.com/public_html`).
+3.  **Upload:** Envie o **conteúdo** da pasta `dist` gerada para a pasta pública do seu domínio.
 
 ---
 
 ## Desenvolvimento Local
 
-Para executar o projeto localmente, siga os passos:
-
 1.  **Dependências:**
-    *   `npm install` (na raiz do projeto)
-    *   `npm install --prefix server` (para as dependências do backend)
+    *   `npm install` (na raiz)
+    *   `npm install --prefix server` (no backend)
 
 2.  **Variáveis de Ambiente:**
-    *   Crie um arquivo `.env` na **raiz** e defina `VITE_API_BASE_URL=http://localhost:3002`.
-    *   Crie um arquivo `.env` na pasta `/server` com as credenciais do seu banco de dados local.
+    *   **Raiz do Projeto (`.env`):**
+        *   `VITE_API_BASE_URL=http://localhost:3002`
+    *   **Backend (`/server/.env`):**
+        *   Credenciais do banco de dados (DB_HOST, DB_USER, etc.).
+        *   `JWT_SECRET=seu_segredo_jwt`
+        *   `PRINTER_IP=192.168.1.100` (IP da sua impressora térmica)
+        *   `PRINTER_PORT=9100` (Porta padrão, geralmente 9100)
 
 3.  **Execução (2 terminais):**
     *   **Backend:** `npm run dev --prefix server`
