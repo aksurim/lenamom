@@ -2,60 +2,50 @@
 
 ## Visão Geral
 
-O **Sistema de Gestão LENAMOM** é uma aplicação web completa para Ponto de Venda (PDV) e gestão de estoque, adaptada especificamente para o modelo de negócio de joias e perfumaria. O sistema é uma evolução direta do projeto base `Loja_Artlicor_Upgrade1.0`, refatorado e aprimorado para oferecer maior flexibilidade, personalização e funcionalidades focadas em negócios online e de venda direta.
+O **Sistema de Gestão LENAMOM** é uma aplicação web completa para Ponto de Venda (PDV) e gestão de estoque, adaptada especificamente para o modelo de negócio de joias e perfumaria.
 
 ---
 
 ## Funcionalidades Principais
 
-*   **Gestão de Clientes Aprimorada:**
-    *   Cadastro de data de nascimento, histórico e perfil de compra.
-
-*   **Gestão de Produtos Avançada:**
-    *   Geração automática de código de barras EAN-13 no cadastro de produtos.
-
-*   **Impressão Térmica Direta (Backend):**
-    *   **Arquitetura Robusta:** O sistema envia comandos de impressão (linguagem TSPL) diretamente do servidor Node.js para a impressora térmica (ex: Tomate MDK-006) via Socket TCP/IP.
-    *   **Independência de Driver:** Esta abordagem elimina a necessidade de drivers de impressão no computador do cliente, resolvendo problemas de compatibilidade, formatação e rotação.
-    *   **Impressão de Cupom de Venda:** Ao finalizar uma venda, o cupom não fiscal é impresso automaticamente, com formatação e corte de papel precisos.
-    *   **Impressão de Etiquetas:** Geração de etiquetas de produto com layout e rotação corretos, prontas para serem enviadas para a impressora.
-
-*   **Flexibilidade nas Vendas:**
-    *   Adição de campo de frete no fechamento do pedido.
-
-*   **Configuração Dinâmica da Empresa:**
-    *   Módulo de configurações para gerenciar dados da empresa e, crucialmente, as **configurações de rede da impressora (IP e Porta)**.
-
-*   **Geração de Relatórios em PDF:**
-    *   O sistema mantém a capacidade de gerar relatórios complexos e documentos para visualização em formato PDF.
+*   **Gestão de Clientes, Produtos e Vendas:** CRUDs completos para a operação do negócio.
+*   **Geração de Código de Barras:** O sistema gera um código interno (`LENXXXX`) e um código EAN-13 para cada produto, garantindo compatibilidade interna e externa.
+*   **Arquitetura de Impressão Híbrida (TSPL + WebUSB):**
+    *   **Backend Inteligente:** O servidor Node.js é responsável por gerar os layouts de impressão na linguagem nativa da impressora (TSPL), garantindo formatação, posicionamento e acentuação corretos.
+    *   **Frontend com Acesso Direto:** O sistema utiliza a API WebUSB do navegador para se comunicar diretamente com a impressora térmica conectada via USB, eliminando a necessidade de drivers de impressão e resolvendo problemas de compatibilidade.
+    *   **Impressão Robusta:** A impressão de cupons e etiquetas é feita de forma precisa e confiável.
+*   **Geração de Relatórios em PDF:** O sistema mantém a capacidade de gerar relatórios complexos para visualização em tela ou impressão convencional.
 
 ## Tecnologias Utilizadas
 
 | Categoria      | Tecnologia                                      |
 | :------------- | :---------------------------------------------- |
-| **Frontend**   | React, Vite, TypeScript, Tailwind CSS, shadcn/ui  |
-| **Backend**    | Node.js, Express, TSPL                            |
+| **Frontend**   | React, Vite, TypeScript, WebUSB, Tailwind CSS     |
+| **Backend**    | Node.js, Express, TSPL (Geração de Layout)        |
 | **Banco de Dados** | MySQL                                           |
-| **Comunicação**  | REST API, Socket TCP/IP                         |
+| **Comunicação**  | REST API                                        |
 | **Autenticação** | JWT, bcrypt                                     |
 
 ---
 
 ## Estrutura de Deploy
 
-A implantação é dividida em **Backend (App Node.js)** e **Frontend (Site Estático)**.
+### Requisitos Críticos
 
-### Parte 1: Deploy do Backend (App Node.js)
+*   **HTTPS para o Frontend:** A API WebUSB, por motivos de segurança, **só funciona se o site do frontend for servido via HTTPS**. O seu provedor de hospedagem deve ter um certificado SSL (ex: Let's Encrypt) instalado para o domínio.
+*   **Configuração do Cliente:** Cada computador que for imprimir precisará de uma configuração única, descrita no arquivo `INSTRUCOES_IMPRESSORA.md`.
 
-1.  **Preparação:** Envie o código-fonte do projeto (exceto `node_modules` e `.env`) para uma pasta não pública no servidor.
-2.  **Instalação:** Execute `npm install` na raiz do projeto e também no diretório `/server`.
-3.  **Configuração (`.env` na pasta `/server`):** Defina as variáveis de ambiente para a conexão com o banco de dados, o segredo JWT e as **configurações da impressora**.
+### Passos do Deploy
 
-### Parte 2: Deploy do Frontend (Site Estático)
+1.  **Backend (App Node.js):**
+    *   Envie o código da pasta `/server` para seu servidor.
+    *   Execute `npm install`.
+    *   Configure o arquivo `.env` com as credenciais do banco de dados e o segredo JWT.
 
-1.  **Build Local:** Edite o arquivo `.env` na raiz do projeto e aponte a `VITE_API_BASE_URL` para o domínio do backend.
-2.  **Execução do Build:** Rode o comando `npm run build`.
-3.  **Upload:** Envie o **conteúdo** da pasta `dist` gerada para a pasta pública do seu domínio.
+2.  **Frontend (Site Estático):**
+    *   Edite o arquivo `.env` na raiz do projeto e aponte a `VITE_API_BASE_URL` para o domínio do seu backend.
+    *   Execute o comando `npm run build`.
+    *   Envie o **conteúdo** da pasta `dist` gerada para a pasta pública do seu domínio (que deve estar configurado com HTTPS).
 
 ---
 
@@ -65,16 +55,17 @@ A implantação é dividida em **Backend (App Node.js)** e **Frontend (Site Est�
     *   `npm install` (na raiz)
     *   `npm install --prefix server` (no backend)
 
-2.  **Variáveis de Ambiente:**
+2.  **Configuração da Impressora (Obrigatório):**
+    *   Siga as instruções do arquivo `INSTRUCOES_IMPRESSORA.md` para configurar o driver da sua impressora USB com o Zadig. Este passo é essencial para que o navegador possa se comunicar com ela.
+
+3.  **Variáveis de Ambiente:**
     *   **Raiz do Projeto (`.env`):**
         *   `VITE_API_BASE_URL=http://localhost:3002`
     *   **Backend (`/server/.env`):**
         *   Credenciais do banco de dados (DB_HOST, DB_USER, etc.).
         *   `JWT_SECRET=seu_segredo_jwt`
-        *   `PRINTER_IP=192.168.1.100` (IP da sua impressora térmica)
-        *   `PRINTER_PORT=9100` (Porta padrão, geralmente 9100)
 
-3.  **Execução (2 terminais):**
+4.  **Execução (2 terminais):**
     *   **Backend:** `npm run dev --prefix server`
     *   **Frontend:** `npm run dev`
 
