@@ -41,7 +41,8 @@ export interface ThermalReceiptData {
 // --- FUNÇÕES AUXILIARES ---
 const getCompanySettings = async (): Promise<Partial<CompanySettings>> => {
   try {
-    const response = await api.get('/settings');
+    // CORREÇÃO: Chama a rota correta que lê do arquivo JSON.
+    const response = await api.get('/company-settings');
     return response.data;
   } catch (error) {
     console.error("Falha ao buscar configurações da empresa para o PDF, usando fallback.", error);
@@ -91,13 +92,14 @@ export const generateStandardPdf = async (options: PdfOptions) => {
         doc.addImage(logoImg, 'PNG', margin, currentY, logoW, logoH);
     }
 
+    // CORREÇÃO: Usa as chaves corretas do arquivo JSON.
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(14);
     doc.text(settings.company_name || 'Nome da Empresa', pageW / 2, currentY + 7, { align: 'center' });
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text(settings.instagram || '@seu.instagram', pageW / 2, currentY + 14, { align: 'center' });
-    doc.text(settings.contact || 'Contato da Empresa', pageW / 2, currentY + 19, { align: 'center' });
+    doc.text(settings.instagram || 'Rede Social', pageW / 2, currentY + 14, { align: 'center' });
+    doc.text(settings.contact || 'Telefone de Contato', pageW / 2, currentY + 19, { align: 'center' });
     currentY += 30;
     doc.setLineWidth(0.2);
     doc.line(margin, currentY, pageW - margin, currentY);
@@ -222,10 +224,10 @@ export const generateThermalReceiptPdf = async (data: ThermalReceiptData) => {
     totalHeight += lineHeight * 2; // Subtotal, Frete/Desconto
     totalHeight += lineHeight; // Espaço
     totalHeight += lineHeight; // TOTAL
-    totalHeight += lineHeight; // Espaço
+    totalHeight += lineHeight / 2;
     totalHeight += lineHeight * 3; // Pgto, Pago, Troco
-    totalHeight += lineHeight * 3; // Espaço, "Obrigado"
-    totalHeight += lineHeight * 2; // "NAO E DOCUMENTO FISCAL", margem final
+    totalHeight += lineHeight * 2; // Espaço
+    totalHeight += lineHeight * 3; // "Obrigado", "NAO E DOCUMENTO FISCAL", margem final
 
     // --- Configurar canvas com altura correta e desenhar ---
     canvas.width = canvasWidth;

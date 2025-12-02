@@ -3,77 +3,181 @@ const router = express.Router();
 const pool = require('../db');
 const { protect } = require('../middleware/authMiddleware');
 const { logAction } = require('../services/auditLogService');
+const fs = require('fs');
+const path = require('path');
 
-// Função para gerar o comando TSPL do cupom
+// --- FUNÇÃO AUXILIAR: SANITIZAÇÃO DE TEXTO ---
+const sanitizeText = (str) => {
+    if (!str) return "";
+    return str
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\x20-\x7E]/g, "");
+};
+
+// --- FUNÇÃO DE GERAÇÃO DE CUPOM ---
 const generateReceiptTspl = (saleData) => {
-    const { saleCode, customerName, items, total_amount, paid_amount, change_amount, paymentMethod, shipping_cost, sale_date } = saleData;
+    const { sale_code, created_at, customerName, items, total_amount, paid_amount, change_amount, paymentMethod, shipping_cost, companySettings } = saleData;
 
-    const formatCurrency = (value) => (value || 0).toFixed(2).replace('.', ',');
-    const saleDate = new Date(sale_date);
+    const formatCurrency = (value) => `R$ ${(Number(value) || 0).toFixed(2).replace('.', ',')}`;
+    
+    const saleDate = new Date(created_at);
     const dateStr = `${saleDate.getDate().toString().padStart(2, '0')}/${(saleDate.getMonth() + 1).toString().padStart(2, '0')}/${saleDate.getFullYear()}`;
     const timeStr = `${saleDate.getHours().toString().padStart(2, '0')}:${saleDate.getMinutes().toString().padStart(2, '0')}`;
 
+    const paperWidth = 550;
+    const margin = 10;
+    const right = paperWidth - 60;
+    const font = '"2"';
+    const charWidth = 12;
+    const center = paperWidth / 2;
+    const separator = "=".repeat(44);
+
+    const line1 = sanitizeText(companySettings.company_name || 'NOME DA EMPRESA');
+    const line2 = sanitizeText(companySettings.instagram || 'Rede Social');
+    const line3 = sanitizeText(companySettings.contact || 'Telefone de Contato');
+    const safeCustomer = sanitizeText(customerName || 'Nao informado');
+    const safePayment = sanitizeText(paymentMethod || 'Nao informado');
+
     let tspl = '';
-    tspl += 'SIZE 80 mm, 100 mm\r\n';
-    tspl += 'GAP 0,0\r\n';
-    tspl += 'CODEPAGE 850\r\n'; // Adicionado para suportar acentuação
-    tspl += 'CLS\r\n';
-    
-    // Cabeçalho
-    tspl += `TEXT 320,30,"TSS24.BF2",0,1,1,"NOME DA EMPRESA"\r\n`;
-    tspl += `TEXT 320,60,"TSS24.BF2",0,1,1,"@seu.instagram"\r\n`;
-    tspl += `TEXT 320,90,"TSS24.BF2",0,1,1,"(83) 99123-8327"\r\n`;
-    tspl += `BAR 20,120,600,2\r\n`;
-    tspl += `TEXT 20,140,"TSS24.BF2",0,1,1,"Pedido: ${saleCode}"\r\n`;
-    tspl += `TEXT 20,170,"TSS24.BF2",0,1,1,"Data: ${dateStr} ${timeStr}"\r\n`;
-    tspl += `TEXT 20,200,"TSS24.BF2",0,1,1,"Cliente: ${customerName || 'Nao informado'}"\r\n`;
-    tspl += `BAR 20,230,600,2\r\n`;
+    let y = 30;
 
-    // Itens
-    tspl += `TEXT 20,250,"TSS24.BF2",0,1,1,"Produto"\r\n`;
-    tspl += `TEXT 380,250,"TSS24.BF2",0,1,1,"Qtd"\r\n`;
-    tspl += `TEXT 500,250,"TSS24.BF2",0,1,1,"Total"\r\n`;
-    tspl += `BAR 20,280,600,1\r\n`;
+    let content = '';
 
-    let y = 300;
-    items.forEach(item => {
-        const desc = item.description.substring(0, 20);
-        tspl += `TEXT 20,${y},"TSS24.BF2",0,1,1,"${desc}"\r\n`;
-        tspl += `TEXT 380,${y},"TSS24.BF2",0,1,1,"${item.quantity}"\r\n`;
-        tspl += `TEXT 500,${y},"TSS24.BF2",0,1,1,"${formatCurrency(item.subtotal)}"\r\n`;
-        y += 30;
-    });
-
-    tspl += `BAR 20,${y},600,2\r\n`;
-    y += 20;
-
-    // Totais
-    const addTotalLine = (label, value) => {
-        tspl += `TEXT 20,${y},"TSS24.BF2",0,1,1,"${label}"\r\n`;
-        tspl += `TEXT 580,${y},"TSS24.BF2",0,1,2,"${value}"\r\n`;
-        y += 30;
+    const centerText = (text, yPos) => {
+        const startX = Math.max(margin, center - ((text.length * charWidth) / 2));
+        return `TEXT ${startX},${yPos},${font},0,1,1,"${text}"\r\n`;
     };
 
-    addTotalLine('Subtotal:', formatCurrency(items.reduce((acc, i) => acc + i.subtotal, 0)));
-    if (shipping_cost > 0) addTotalLine('Frete:', formatCurrency(shipping_cost));
-    addTotalLine('TOTAL:', `R$ ${formatCurrency(total_amount)}`);
-    y += 10;
-    addTotalLine('Forma Pgto:', paymentMethod);
-    addTotalLine('Valor Pago:', `R$ ${formatCurrency(paid_amount)}`);
-    if (change_amount > 0) addTotalLine('Troco:', `R$ ${formatCurrency(change_amount)}`);
+    content += centerText(line1, y); y += 40;
+    content += centerText(line2, y); y += 40;
+    content += centerText(line3, y); y += 40;
     
-    y += 40;
-    tspl += `TEXT 320,${y},"TSS24.BF2",0,1,1,"Obrigado pela preferencia!"\r\n`;
-    y += 40;
-    tspl += `TEXT 320,${y},"TSS24.BF2",0,1,1,"*** NAO E DOCUMENTO FISCAL ***"\r\n`;
+    content += `TEXT ${margin},${y},${font},0,1,1,"${separator}"\r\n`; y += 40;
 
+    content += `TEXT ${margin},${y},${font},0,1,1,"Pedido: ${sale_code}"\r\n`; y += 40;
+    content += `TEXT ${margin},${y},${font},0,1,1,"Data: ${dateStr} ${timeStr}"\r\n`; y += 40;
+    content += `TEXT ${margin},${y},${font},0,1,1,"Cliente: ${safeCustomer}"\r\n`; y += 40;
+    content += `TEXT ${margin},${y},${font},0,1,1,"${separator}"\r\n`; y += 40;
+
+    const colProd = margin;
+    const colQtd = 380;
+    const colTotal = right;
+    const totalLabel = "Total";
+
+    content += `TEXT ${colProd},${y},${font},0,1,1,"Produto"\r\n`;
+    content += `TEXT ${colQtd},${y},${font},0,1,1,"Qtd"\r\n`;
+    content += `RIGHT\r\n`;
+    content += `TEXT ${colTotal},${y},${font},0,1,1,"${totalLabel}"\r\n`;
+    content += `LEFT\r\n`;
+    y += 40;
+    content += `TEXT ${margin},${y},${font},0,1,1,"${separator}"\r\n`; y += 30;
+
+    items.forEach(item => {
+        const rawDesc = item.description || 'Produto sem descricao';
+        const cleanDesc = sanitizeText(rawDesc);
+        const desc = cleanDesc.length > 22 ? cleanDesc.substring(0, 22) + '...' : cleanDesc;
+        const subtotalStr = formatCurrency(item.subtotal);
+        
+        y += 40;
+        content += `TEXT ${colProd},${y},${font},0,1,1,"${desc}"\r\n`;
+        content += `TEXT ${colQtd},${y},${font},0,1,1,"${item.quantity}"\r\n`;
+        content += `RIGHT\r\n`;
+        content += `TEXT ${colTotal},${y},${font},0,1,1,"${subtotalStr}"\r\n`;
+        content += `LEFT\r\n`;
+    });
+    y += 30;
+    content += `TEXT ${margin},${y},${font},0,1,1,"${separator}"\r\n`; y += 40;
+
+    const addTotalLine = (label, value) => {
+        const sanitizedLabel = sanitizeText(label);
+        let line = `TEXT ${margin},${y},${font},0,1,1,"${sanitizedLabel}"\r\n`;
+        line += `RIGHT\r\n`;
+        line += `TEXT ${right},${y},${font},0,1,1,"${value}"\r\n`;
+        line += `LEFT\r\n`;
+        y += 40;
+        return line;
+    };
+
+    const subtotalValue = items.reduce((acc, i) => acc + Number(i.subtotal || 0), 0);
+    content += addTotalLine('Subtotal:', formatCurrency(subtotalValue));
+    if (Number(shipping_cost) > 0) content += addTotalLine('Frete:', formatCurrency(shipping_cost));
+    content += addTotalLine('TOTAL:', formatCurrency(total_amount));
+    y += 15;
+
+    content += addTotalLine('Valor Pago:', formatCurrency(paid_amount));
+    if (Number(change_amount) > 0) content += addTotalLine('Troco:', formatCurrency(change_amount));
+    
+    content += `TEXT ${margin},${y},${font},0,1,1,"Forma Pgto: ${safePayment}"\r\n`; y += 40;
+    
+    y += 50;
+
+    content += centerText("Obrigado pela preferencia!", y); y += 40;
+    content += centerText("*** NAO E DOCUMENTO FISCAL ***", y);
+    
+    // AJUSTE FINO: Adiciona um espaço extra (equivalente a uma linha) antes do corte.
+    const finalHeight = y + 80; 
+
+    tspl += `SIZE 80 mm, ${Math.ceil(finalHeight / 8)} mm\r\n`; 
+    tspl += 'DIRECTION 1\r\n';
+    tspl += 'GAP 0,0\r\n';
+    tspl += 'CODEPAGE 850\r\n';
+    tspl += 'CLS\r\n';
+    tspl += 'REFERENCE 0,0\r\n';
+    tspl += content;
     tspl += `PRINT 1,1\r\n`;
     tspl += `CUT\r\n`;
 
     return tspl;
 };
 
-// POST /api/sales - Finaliza a venda (sem impressão automática)
+// Rota de geração de comando
+router.post('/generate-receipt-command', protect, async (req, res) => {
+    const { saleId } = req.body;
+    if (!saleId) {
+        return res.status(400).json({ message: 'O ID da venda é obrigatório.' });
+    }
+
+    try {
+        const [[sale]] = await pool.query(
+            `SELECT s.*, c.name as customer_name, pm.description as payment_method_name 
+             FROM sales s 
+             LEFT JOIN customers c ON s.customer_id = c.id 
+             LEFT JOIN payment_methods pm ON s.payment_method_id = pm.id
+             WHERE s.id = ?`, [saleId]
+        );
+        if (!sale) return res.status(404).json({ message: 'Venda não encontrada.' });
+
+        const [items] = await pool.query(
+            `SELECT si.*, p.description 
+             FROM sale_items si 
+             JOIN products p ON si.product_id = p.id 
+             WHERE si.sale_id = ?`, [saleId]
+        );
+
+        const settingsPath = path.join(__dirname, '..', 'company-settings.json');
+        const settingsData = fs.readFileSync(settingsPath, 'utf8');
+        const companySettings = JSON.parse(settingsData);
+
+        const receiptData = {
+            ...sale,
+            customerName: sale.customer_name,
+            paymentMethod: sale.payment_method_name,
+            items: items,
+            companySettings: companySettings,
+        };
+
+        const tsplCommand = generateReceiptTspl(receiptData);
+        res.status(200).json({ tsplCommand });
+
+    } catch (error) {
+        console.error('Erro detalhado ao gerar cupom:', error);
+        res.status(500).json({ message: 'Erro ao gerar comando do cupom.', error: error.message });
+    }
+});
+
+
+// POST /api/sales - Finaliza a venda
 router.post('/', protect, async (req, res) => {
   const { customer_id, payment_method_id, total_amount, paid_amount, change_amount, items, shipping_cost } = req.body;
   if (!payment_method_id || !items || items.length === 0) return res.status(400).json({ message: 'A forma de pagamento e pelo menos um item são obrigatórios.' });
@@ -116,55 +220,7 @@ router.post('/', protect, async (req, res) => {
   }
 });
 
-// NOVA ROTA: POST /api/sales/generate-receipt-command - Gera o comando TSPL para um cupom
-router.post('/generate-receipt-command', protect, async (req, res) => {
-    const { saleId } = req.body;
-    if (!saleId) {
-        return res.status(400).json({ message: 'O ID da venda é obrigatório.' });
-    }
-
-    try {
-        const [[sale]] = await pool.query(
-            `SELECT s.*, c.name as customer_name, pm.description as payment_method_name 
-             FROM sales s 
-             LEFT JOIN customers c ON s.customer_id = c.id 
-             LEFT JOIN payment_methods pm ON s.payment_method_id = pm.id
-             WHERE s.id = ?`, [saleId]
-        );
-
-        if (!sale) {
-            return res.status(404).json({ message: 'Venda não encontrada.' });
-        }
-
-        const [items] = await pool.query(
-            `SELECT si.*, p.description 
-             FROM sale_items si 
-             JOIN products p ON si.product_id = p.id 
-             WHERE si.sale_id = ?`, [saleId]
-        );
-
-        const receiptData = {
-            saleCode: sale.sale_code,
-            customerName: sale.customer_name,
-            items: items,
-            total_amount: sale.total_amount,
-            paid_amount: sale.paid_amount,
-            change_amount: sale.change_amount,
-            paymentMethod: sale.payment_method_name,
-            shipping_cost: sale.shipping_cost,
-            sale_date: sale.created_at,
-        };
-
-        const tsplCommand = generateReceiptTspl(receiptData);
-        res.status(200).json({ tsplCommand });
-
-    } catch (error) {
-        res.status(500).json({ message: 'Erro ao gerar comando do cupom.', error: error.message });
-    }
-});
-
-
-// GET /api/sales/:id/details - Requer apenas autenticação
+// GET /api/sales/:id/details
 router.get('/:id/details', protect, async (req, res) => {
     const { id } = req.params;
     try {

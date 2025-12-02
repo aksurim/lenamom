@@ -55,10 +55,15 @@ Esta seção define a stack tecnológica aprovada para o projeto.
 - **Módulo de Configurações:** Permite ao administrador do sistema alterar dinamicamente os dados da empresa.
 - **Geração de Documentos PDF:** Sistema padronizado para criar relatórios e outros documentos não-impressos.
 - **Arquitetura de Impressão Híbrida (TSPL + WebUSB):**
-    - **Backend como Gerador de Layout:** O backend é a "fonte da verdade" para os layouts de impressão. Ele possui rotas que geram a string de comando na linguagem nativa da impressora (TSPL), com todos os cálculos de posicionamento, acentuação e formatação.
+    - **Backend como Gerador de Layout:** O backend é a "fonte da verdade" para os layouts de impressão. Ele possui rotas que geram a string de comando na linguagem nativa da impressora (TSPL).
+    - **Sanitização de Texto:** Para garantir a compatibilidade com uma vasta gama de hardwares de impressão térmica, o backend realiza uma **sanitização** de todo o texto, removendo acentos e caracteres especiais antes de montar o comando TSPL. Isso assegura a impressão legível em qualquer cenário.
     - **Frontend como Executor de Impressão:** O frontend busca a string de comando TSPL do backend e, utilizando a API WebUSB, envia esses dados diretamente para a impressora conectada via USB.
     - **Independência de Driver:** Esta abordagem elimina a necessidade de drivers de impressão complexos, exigindo apenas uma configuração única no cliente (via Zadig) para permitir a comunicação direta do navegador com o hardware.
-    - **Impressão de Cupom e Etiquetas:** O sistema imprime cupons de venda e etiquetas de produto com layout preciso, resolvendo problemas de alinhamento, rotação e formatação.
+    - **Impressão de Cupom e Etiquetas:** O sistema imprime cupons de venda e etiquetas de produto com layout preciso.
+    - **Refinamento de Layout (Lições Aprendidas):**
+        - **Comandos Primitivos:** Para contornar inconsistências de firmware em impressoras, o layout evita comandos complexos como `BAR` (linhas). Em vez disso, linhas divisórias são criadas com caracteres de texto (ex: `========`), garantindo consistência visual.
+        - **Controle de Fonte:** Foi adotada uma fonte global de tamanho médio (`"2"`) para melhorar a legibilidade, com espaçamento vertical ajustado para manter a clareza.
+        - **Alinhamento Robusto:** O alinhamento à direita é usado para valores numéricos, enquanto textos longos são mantidos à esquerda para evitar cortes, garantindo um layout limpo e profissional.
 
 ---
 *Este documento é a Fonte da Verdade para todas as especificações técnicas e o escopo do projeto LENAMOM. Ele deve ser mantido atualizado.*

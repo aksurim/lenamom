@@ -11,7 +11,7 @@ O **Sistema de Gestão LENAMOM** é uma aplicação web completa para Ponto de V
 *   **Gestão de Clientes, Produtos e Vendas:** CRUDs completos para a operação do negócio.
 *   **Geração de Código de Barras:** O sistema gera um código interno (`LENXXXX`) e um código EAN-13 para cada produto, garantindo compatibilidade interna e externa.
 *   **Arquitetura de Impressão Híbrida (TSPL + WebUSB):**
-    *   **Backend Inteligente:** O servidor Node.js é responsável por gerar os layouts de impressão na linguagem nativa da impressora (TSPL), garantindo formatação, posicionamento e acentuação corretos.
+    *   **Backend Inteligente:** O servidor Node.js é responsável por gerar os layouts de impressão na linguagem nativa da impressora (TSPL), garantindo formatação, posicionamento e sanitização de texto para máxima compatibilidade.
     *   **Frontend com Acesso Direto:** O sistema utiliza a API WebUSB do navegador para se comunicar diretamente com a impressora térmica conectada via USB, eliminando a necessidade de drivers de impressão e resolvendo problemas de compatibilidade.
     *   **Impressão Robusta:** A impressão de cupons e etiquetas é feita de forma precisa e confiável.
 *   **Geração de Relatórios em PDF:** O sistema mantém a capacidade de gerar relatórios complexos para visualização em tela ou impressão convencional.
@@ -68,6 +68,7 @@ O **Sistema de Gestão LENAMOM** é uma aplicação web completa para Ponto de V
 4.  **Execução (2 terminais):**
     *   **Backend:** `npm run dev --prefix server`
     *   **Frontend:** `npm run dev`
+    *   **Nota Importante:** O servidor de backend (`nodemon`) não recarrega automaticamente quando as dependências ou arquivos fora da sua árvore de execução são modificados. Após fazer alterações significativas no backend (como `npm install` no servidor ou modificar arquivos de rota), é uma boa prática reiniciar manualmente o servidor (`Ctrl + C` e `npm run dev --prefix server`) para garantir que todas as mudanças sejam aplicadas.
 
 ## Desenvolvido por
 

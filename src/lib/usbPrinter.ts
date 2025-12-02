@@ -1,41 +1,37 @@
 import { toast } from 'sonner';
 
-let usbDevice: USBDevice | null = null;
-
 /**
- * Solicita ao usuário permissão para um dispositivo USB e o retorna.
- * Armazena o dispositivo em uma variável global para reutilização.
+ * Solicita um dispositivo USB ao usuário.
+ * Esta função é interna ao módulo.
  * @returns {Promise<USBDevice>} O dispositivo USB selecionado pelo usuário.
  */
-export const getUsbDevice = async (): Promise<USBDevice> => {
-  try {
-    if (!navigator.usb) {
-      throw new Error("A API WebUSB não é suportada por este navegador. Use o Google Chrome ou Edge.");
-    }
-    
-    // Pede ao usuário para selecionar um dispositivo
-    const device = await navigator.usb.requestDevice({ filters: [] });
-    if (!device) {
-      throw new Error("Nenhum dispositivo USB foi selecionado.");
-    }
-    
-    usbDevice = device; // Armazena para uso futuro
-    return device;
-
-  } catch (error: any) {
-    console.error("Erro ao solicitar dispositivo USB:", error);
-    toast.error(error.message || "Falha ao obter permissão para o dispositivo USB.");
-    throw error;
+const requestUsbDevice = async (): Promise<USBDevice> => {
+  if (!navigator.usb) {
+    throw new Error("A API WebUSB não é suportada por este navegador. Use o Google Chrome ou Edge.");
   }
+  
+  // Pede ao usuário para selecionar um dispositivo.
+  // O navegador geralmente lembra das permissões concedidas.
+  const device = await navigator.usb.requestDevice({ filters: [] });
+  if (!device) {
+    throw new Error("Nenhum dispositivo USB foi selecionado.");
+  }
+  
+  return device;
 };
 
 /**
- * Envia um comando TSPL para um dispositivo USB já autorizado.
- * @param {USBDevice} device O dispositivo USB obtido através de getUsbDevice.
+ * Envia um comando TSPL para uma impressora USB.
+ * Esta função gerencia todo o ciclo: solicitar dispositivo, abrir, enviar dados e fechar.
  * @param {string} tsplCommand A string de comando TSPL a ser enviada.
  */
-export const sendTsplOverUsb = async (device: USBDevice, tsplCommand: string): Promise<void> => {
+export const sendTsplOverUsb = async (tsplCommand: string): Promise<void> => {
+  let device: USBDevice | null = null;
   try {
+    // Passo 1: Solicita o dispositivo ao usuário.
+    device = await requestUsbDevice();
+
+    // Passo 2: Abre a conexão, configura e envia os dados.
     await device.open();
     if (device.configuration === null) {
       await device.selectConfiguration(1);
@@ -58,11 +54,12 @@ export const sendTsplOverUsb = async (device: USBDevice, tsplCommand: string): P
 
   } catch (error: any) {
     console.error("Erro durante a transferência de dados USB:", error);
-    toast.error(error.message || "Falha ao enviar dados para a impressora USB.");
+    // O erro será relançado para ser capturado pelo toast.promise no chamador (Sales.tsx).
+    // Isso evita mensagens de erro duplicadas.
     throw error;
   } finally {
-    // É importante fechar o dispositivo após o uso para liberá-lo.
-    if (device.opened) {
+    // Passo 3: Garante que o dispositivo seja fechado para liberá-lo.
+    if (device && device.opened) {
       await device.close();
     }
   }

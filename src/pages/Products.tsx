@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { getUsbDevice, sendTsplOverUsb } from "@/lib/usbPrinter"; // Importa as novas funções
+import { sendTsplOverUsb } from "@/lib/usbPrinter"; // CORREÇÃO: Importa apenas a função unificada
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,7 +70,7 @@ const initialFormData: ProductFormData = {
     supplier_id: "",
 };
 
-// --- COMPONENTE MODAL DE IMPRESSÃO DE ETIQUETA (ATUALIZADO PARA WEBUSB) ---
+// --- COMPONENTE MODAL DE IMPRESSÃO DE ETIQUETA (REFATORADO) ---
 function PrintLabelModal({ product, isOpen, onClose }: { product: Product | null; isOpen: boolean; onClose: () => void; }) {
     const [copies, setCopies] = useState(1);
     const [isPrinting, setIsPrinting] = useState(false);
@@ -78,29 +78,29 @@ function PrintLabelModal({ product, isOpen, onClose }: { product: Product | null
     const handlePrint = async () => {
         if (!product || copies < 1) return;
         setIsPrinting(true);
-        try {
+
+        const printPromise = async () => {
             // 1. Obter o comando TSPL do backend
             const generateResponse = await api.post('/products/generate-label', { productId: product.id });
             const { tsplCommand } = generateResponse.data;
             if (!tsplCommand) throw new Error("Comando TSPL não foi gerado pelo servidor.");
 
-            // 2. Obter permissão para o dispositivo USB (APENAS UMA VEZ)
-            toast.info("Por favor, selecione a impressora na janela do navegador.");
-            const device = await getUsbDevice();
-
-            // 3. Enviar o comando em loop para o dispositivo já autorizado
-            toast.success(`Enviando ${copies} etiqueta(s)...`);
+            // 2. Enviar o comando em loop usando a nova função unificada
             for (let i = 0; i < copies; i++) {
-                await sendTsplOverUsb(device, tsplCommand);
+                // A cada chamada, a função pedirá o dispositivo (se necessário) e enviará o comando.
+                await sendTsplOverUsb(tsplCommand);
             }
-            
-            toast.success(`${copies} etiqueta(s) enviada(s) com sucesso.`);
-            onClose();
-        } catch (error: any) {
-            console.error("Falha no processo de impressão de etiqueta:", error);
-        } finally {
-            setIsPrinting(false);
-        }
+        };
+
+        toast.promise(printPromise(), {
+            loading: `Enviando ${copies} etiqueta(s)... Por favor, selecione a impressora na janela do navegador, se solicitado.`,
+            success: `${copies} etiqueta(s) enviada(s) com sucesso!`,
+            error: (err: any) => `Falha na impressão: ${err.message || 'Erro desconhecido.'}`,
+            finally: () => {
+                setIsPrinting(false);
+                onClose(); // Fecha o modal após a conclusão
+            },
+        });
     };
 
     if (!product) return null;
