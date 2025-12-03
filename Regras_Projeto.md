@@ -33,3 +33,4 @@ Não gere todo o código de uma vez. Trabalhe por etapas atômicas:
 - Siga estritamente a stack definida no `Blueprint.md`.
 - Aplique Clean Code, princípios SOLID e DRY.
 - Comentários no código devem ser úteis e em PT-BR.
+- **Banco de Dados:** Antes de escrever código que interage com uma tabela de banco de dados ou propor alterações de schema (CREATE, ALTER), você DEVE me perguntar sobre a existência e a estrutura exata da tabela. Não presuma a estrutura do banco de dados.

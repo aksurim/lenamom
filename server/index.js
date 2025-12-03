@@ -18,7 +18,8 @@ const reportRoutes = require('./routes/reports');
 const userRoutes = require('./routes/users');
 const auditLogRoutes = require('./routes/audit-logs');
 const cashMovementRoutes = require('./routes/cash-movements');
-const companySettingsRoutes = require('./routes/companySettings'); // <-- CORREÇÃO: Importa a nova rota
+const companySettingsRoutes = require('./routes/companySettings');
+const stockMovementRoutes = require('./routes/stock-movements'); // <-- ADICIONADO
 
 const app = express();
 const port = process.env.PORT || 3002;
@@ -45,7 +46,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/audit-logs', auditLogRoutes);
 app.use('/api/cash-movements', cashMovementRoutes);
-app.use('/api/company-settings', companySettingsRoutes); // <-- CORREÇÃO: Registra a nova rota
+app.use('/api/company-settings', companySettingsRoutes);
+app.use('/api/stock-movements', stockMovementRoutes); // <-- ADICIONADO
 
 // --- Rota de Fallback para o Frontend ---
 app.get('*', (req, res) => {
