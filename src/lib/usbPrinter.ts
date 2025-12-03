@@ -1,66 +1,64 @@
-import { toast } from 'sonner';
-
 /**
- * Solicita um dispositivo USB ao usuário.
- * Esta função é interna ao módulo.
- * @returns {Promise<USBDevice>} O dispositivo USB selecionado pelo usuário.
+ * Solicita ao usuário a seleção de um dispositivo USB e estabelece uma conexão.
+ * @returns {Promise<USBDevice | null>} O dispositivo conectado ou null se nenhum for selecionado.
  */
-const requestUsbDevice = async (): Promise<USBDevice> => {
+export const requestAndConnectDevice = async (): Promise<USBDevice | null> => {
   if (!navigator.usb) {
     throw new Error("A API WebUSB não é suportada por este navegador. Use o Google Chrome ou Edge.");
   }
-  
-  // Pede ao usuário para selecionar um dispositivo.
-  // O navegador geralmente lembra das permissões concedidas.
-  const device = await navigator.usb.requestDevice({ filters: [] });
-  if (!device) {
-    throw new Error("Nenhum dispositivo USB foi selecionado.");
-  }
-  
-  return device;
-};
-
-/**
- * Envia um comando TSPL para uma impressora USB.
- * Esta função gerencia todo o ciclo: solicitar dispositivo, abrir, enviar dados e fechar.
- * @param {string} tsplCommand A string de comando TSPL a ser enviada.
- */
-export const sendTsplOverUsb = async (tsplCommand: string): Promise<void> => {
-  let device: USBDevice | null = null;
   try {
-    // Passo 1: Solicita o dispositivo ao usuário.
-    device = await requestUsbDevice();
+    const device = await navigator.usb.requestDevice({ filters: [] });
+    if (!device) return null;
 
-    // Passo 2: Abre a conexão, configura e envia os dados.
     await device.open();
     if (device.configuration === null) {
       await device.selectConfiguration(1);
     }
     await device.claimInterface(0);
-
-    const endpointOut = device.configuration?.interfaces[0]?.alternate.endpoints.find(
-      e => e.direction === 'out'
-    );
-
-    if (!endpointOut) {
-      throw new Error("Endpoint de saída não encontrado no dispositivo USB.");
+    console.log("Dispositivo conectado e interface reivindicada.");
+    return device;
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'NotFoundError') {
+      console.log("Nenhum dispositivo selecionado pelo usuário.");
+      return null;
     }
-
-    const encoder = new TextEncoder();
-    const data = encoder.encode(tsplCommand);
-
-    await device.transferOut(endpointOut.endpointNumber, data);
-    console.log("Comando TSPL enviado com sucesso para o dispositivo.");
-
-  } catch (error: any) {
-    console.error("Erro durante a transferência de dados USB:", error);
-    // O erro será relançado para ser capturado pelo toast.promise no chamador (Sales.tsx).
-    // Isso evita mensagens de erro duplicadas.
+    // Relança outros erros para serem tratados pelo chamador.
     throw error;
-  } finally {
-    // Passo 3: Garante que o dispositivo seja fechado para liberá-lo.
-    if (device && device.opened) {
+  }
+};
+
+/**
+ * Envia uma string de comando TSPL para um dispositivo USB já conectado.
+ * @param {USBDevice} device O dispositivo USB para o qual enviar os dados.
+ * @param {string} tsplCommand A string de comando TSPL.
+ */
+export const sendDataToDevice = async (device: USBDevice, tsplCommand: string): Promise<void> => {
+  const endpointOut = device.configuration?.interfaces[0]?.alternate.endpoints.find(
+    e => e.direction === 'out'
+  );
+
+  if (!endpointOut) {
+    throw new Error("Endpoint de saída não encontrado no dispositivo USB.");
+  }
+
+  const encoder = new TextEncoder();
+  const data = encoder.encode(tsplCommand);
+
+  await device.transferOut(endpointOut.endpointNumber, data);
+  console.log("Comando TSPL enviado com sucesso para o dispositivo.");
+};
+
+/**
+ * Fecha a conexão com um dispositivo USB.
+ * @param {USBDevice | null} device O dispositivo a ser desconectado.
+ */
+export const closeDevice = async (device: USBDevice | null): Promise<void> => {
+  if (device && device.opened) {
+    try {
       await device.close();
+      console.log("Conexão com o dispositivo USB fechada.");
+    } catch (error) {
+      console.error("Erro ao fechar o dispositivo USB:", error);
     }
   }
 };

@@ -12,9 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, XCircle, ChevronsUpDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-// CORREÇÃO: Importa a nova função de geração de PDF
 import { generateSaleReceiptPdf, SaleReceiptData } from "@/lib/pdfUtils";
-import { sendTsplOverUsb } from "@/lib/usbPrinter";
+// CORREÇÃO: Importa as novas funções de impressão do usbPrinter
+import { requestAndConnectDevice, sendDataToDevice, closeDevice } from "@/lib/usbPrinter";
 
 // --- Tipos de Dados ---
 interface Product { id: number; code: string; barcode?: string; description: string; sale_price: number | string; stock_quantity: number; }
@@ -136,35 +136,40 @@ function PostSaleModal({ saleData, onClose }: { saleData: SaleDataForPrint | nul
     const handlePrintReceipt = async () => {
         if (!saleData) return;
         setIsPrinting(true);
+        let device: USBDevice | null = null;
 
         const printPromise = async () => {
+            // 1. Obter comando do backend
             const response = await api.post('/sales/generate-receipt-command', { saleId: saleData.saleId });
             const { tsplCommand } = response.data;
-            if (!tsplCommand) {
-                throw new Error("Comando TSPL não recebido do servidor.");
-            }
-            await sendTsplOverUsb(tsplCommand);
+            if (!tsplCommand) throw new Error("Comando TSPL não recebido do servidor.");
+
+            // 2. Conectar ao dispositivo
+            device = await requestAndConnectDevice();
+            if (!device) throw new Error("Nenhum dispositivo selecionado.");
+
+            // 3. Enviar dados
+            await sendDataToDevice(device, tsplCommand);
         };
 
         toast.promise(printPromise(), {
             loading: 'Gerando cupom... Por favor, selecione a impressora na janela do navegador.',
             success: 'Cupom enviado para a impressora!',
-            error: (err: any) => `Falha na impressão: ${err.message || 'Nenhum dispositivo selecionado ou erro de comunicação.'}`,
-            finally: () => setIsPrinting(false),
+            error: (err: any) => `Falha na impressão: ${err.message || 'Erro de comunicação.'}`,
+            finally: async () => {
+                // 4. Fechar conexão
+                await closeDevice(device);
+                setIsPrinting(false);
+            },
         });
     };
 
-    // CORREÇÃO: Função simplificada para chamar a nova lógica de PDF.
     const handlePrintPdf = async () => {
         if (!saleData) return;
         try {
-            // 1. Busca os dados completos e enriquecidos da venda.
             const response = await api.get(`/sales/${saleData.saleId}/details`);
             const fullSaleData: SaleReceiptData = response.data;
-
-            // 2. Chama a função de geração de PDF centralizada.
             await generateSaleReceiptPdf(fullSaleData);
-
         } catch (error) {
             console.error("Erro ao gerar recibo PDF:", error);
             toast.error("Falha ao buscar dados da venda para gerar o PDF.");

@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
-import { sendTsplOverUsb } from "@/lib/usbPrinter"; // CORREÇÃO: Importa apenas a função unificada
+// CORREÇÃO: Importa as novas funções específicas do usbPrinter
+import { requestAndConnectDevice, sendDataToDevice, closeDevice } from "@/lib/usbPrinter";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -79,26 +80,36 @@ function PrintLabelModal({ product, isOpen, onClose }: { product: Product | null
         if (!product || copies < 1) return;
         setIsPrinting(true);
 
+        let device: USBDevice | null = null;
+
         const printPromise = async () => {
             // 1. Obter o comando TSPL do backend
             const generateResponse = await api.post('/products/generate-label', { productId: product.id });
             const { tsplCommand } = generateResponse.data;
             if (!tsplCommand) throw new Error("Comando TSPL não foi gerado pelo servidor.");
 
-            // 2. Enviar o comando em loop usando a nova função unificada
+            // 2. Solicitar o dispositivo UMA VEZ
+            device = await requestAndConnectDevice();
+            if (!device) {
+                // Se o usuário não selecionou um dispositivo, não é um erro, apenas paramos.
+                throw new Error("Nenhum dispositivo selecionado.");
+            }
+
+            // 3. Enviar o comando em loop para o dispositivo já conectado
             for (let i = 0; i < copies; i++) {
-                // A cada chamada, a função pedirá o dispositivo (se necessário) e enviará o comando.
-                await sendTsplOverUsb(tsplCommand);
+                await sendDataToDevice(device, tsplCommand);
             }
         };
 
         toast.promise(printPromise(), {
-            loading: `Enviando ${copies} etiqueta(s)... Por favor, selecione a impressora na janela do navegador, se solicitado.`,
+            loading: `Enviando ${copies} etiqueta(s)... Por favor, selecione a impressora na janela do navegador.`,
             success: `${copies} etiqueta(s) enviada(s) com sucesso!`,
             error: (err: any) => `Falha na impressão: ${err.message || 'Erro desconhecido.'}`,
-            finally: () => {
+            finally: async () => {
+                // 4. Garante que o dispositivo seja fechado no final
+                await closeDevice(device);
                 setIsPrinting(false);
-                onClose(); // Fecha o modal após a conclusão
+                onClose();
             },
         });
     };
