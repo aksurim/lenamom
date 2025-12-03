@@ -2,39 +2,28 @@
 
 *Este arquivo contém o passo-a-passo das tarefas a serem executadas no projeto. Marque os itens como concluídos apenas após a validação final.*
 
+## Fase 5: Modernização do PDF de Venda
+
+- [x] **Modernizar Layout do PDF de Venda:** Unificar e redesenhar o PDF de recibo de venda para um padrão profissional.
+  - [x] Enriquecer a API (`/api/sales/:id/details`) para incluir dados de entrega do cliente e forma de pagamento.
+  - [x] Criar uma função centralizada (`generateSaleReceiptPdf`) para o novo layout.
+  - [x] Implementar o novo layout, incluindo "boxes" de divisão, cabeçalho de tabela preto e informações de pagamento.
+  - [x] Integrar a nova função na página de Vendas e no Histórico de Vendas.
+  - [x] Corrigir bugs de regressão (`generateStandardPdf` ausente, `toFixed` em `string`, e coluna SQL incorreta).
+
 ## Fase 4: Otimização e Refinamento Final
 
 - [x] **Otimizar Corte de Papel:** Ajustar o comando `SIZE` no script TSPL para que a altura do cupom seja calculada dinamicamente com base no conteúdo, eliminando o desperdício de bobina.
-- [ ] **Conectar Banco de Informação:** Garantir que os dados da empresa (nome, contato, etc.) sejam carregados do arquivo de configuração (`company-settings.json`) para a impressão do cupom e do PDF.
+- [x] **Conectar Banco de Informação:** Garantir que os dados da empresa (nome, contato, etc.) sejam carregados do arquivo de configuração (`company-settings.json`) para a impressão do cupom e do PDF.
   - [x] Adicionar rota `POST` para salvar os dados da empresa, incluindo o campo `instagram`.
   - [x] Corrigir a rota de impressão para ler os dados do arquivo JSON em vez do banco de dados.
-  - [ ] **PENDENTE (REGRESSÃO):** Corrigir a rota `POST /api/company-settings` para incluir o `logo_url` no salvamento, evitando que o campo seja apagado.
-  - [ ] **PENDENTE:** Unificar o cabeçalho do PDF (`pdfUtils.ts`) para usar os mesmos dados do `company-settings.json`.
+  - [x] **CONCLUÍDO (REGRESSÃO):** Corrigir a rota `POST /api/company-settings` para incluir o `logo_url` no salvamento, evitando que o campo seja apagado.
+  - [x] **CONCLUÍDO:** Unificar o cabeçalho do PDF (`pdfUtils.ts`) para usar os mesmos dados do `company-settings.json`.
+  - [x] **CONCLUÍDO:** Registrar a rota `/api/company-settings` no `server/index.js` para corrigir o erro 404.
 
 ## Fase 3: Arquitetura de Impressão Híbrida (WebUSB)
 
-### 3.1 - Backend: Central de Geração de Layout
-- [x] **Refatorar Rota de Etiquetas:** Modificar a rota `POST /api/products/generate-label` para gerar e retornar o comando TSPL final.
-- [x] **Refatorar Rota de Cupons:** Modificar a rota `POST /api/sales/generate-receipt-command` para gerar e retornar o comando TSPL do cupom.
-  - [x] Implementação inicial da geração de TSPL.
-  - [x] Correção de erros de `undefined` e `NaN` nos dados.
-  - [x] Calibração da largura de impressão para 550 pontos para corrigir o alinhamento.
-  - [x] Adição do prefixo "R$" nos valores monetários.
-  - [x] **CONCLUÍDO:** Corrigir a busca de dados do cabeçalho para usar os campos de "Dados para Documentos".
-  - [x] **CONCLUÍDO:** Validar e ajustar o alinhamento final do layout.
-  - [x] **CONCLUÍDO:** Corrigir a geração do PDF de venda no modal pós-venda.
-
-### 3.2 - Frontend: Executor de Impressão
-- [x] **Criar Serviço WebUSB:** Implementar o módulo `src/lib/usbPrinter.ts` para comunicação direta com a impressora.
-- [x] **Refatorar Impressão de Etiquetas:** Modificar o componente `Products.tsx` para usar o serviço WebUSB.
-- [x] **Refatorar Impressão de Cupons:** Modificar o componente `Sales.tsx` para usar o serviço WebUSB.
-
-### 3.3 - Documentação e Limpeza
-- [x] **Criar Guia do Cliente:** Gerar o arquivo `INSTRUCOES_IMPRESSORA.md`.
-- [x] **Atualizar Documentação do Projeto:** Revisar e atualizar todos os arquivos `.md` para refletir a arquitetura final e o processo de depuração.
-  - [x] `Change_log.md` atualizado com o histórico de depuração.
-  - [x] `Blueprint.md` atualizado com detalhes de implementação.
-  - [x] `README.md` atualizado com notas de desenvolvimento.
+- [x] **CONCLUÍDO**
 
 ---
 

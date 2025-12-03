@@ -8,117 +8,156 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Store, Archive, Building } from "lucide-react"; // Removido Printer
+import { Store, Archive, Building } from "lucide-react";
 import UsersSettings from "./Settings/Users";
 import AuditLogsSettings from "./Settings/AuditLogs";
 
-// Removido default_printer_type
-interface SettingsData {
+// Interfaces separadas para clareza
+interface GeneralSettingsData {
   store_name?: string;
   stagnant_stock_days?: string;
+}
+
+interface CompanySettingsData {
   company_name?: string;
-  cnpj?: string;
   instagram?: string;
   contact?: string;
   logo_url?: string;
+  cnpj?: string; // Adicionado para consistência com o backend
 }
 
 function GeneralSettings() {
   const queryClient = useQueryClient();
-  const [settings, setSettings] = useState<SettingsData>({});
+  
+  // Estados separados para cada tipo de configuração
+  const [generalSettings, setGeneralSettings] = useState<GeneralSettingsData>({});
+  const [companySettings, setCompanySettings] = useState<CompanySettingsData>({});
 
-  const { data: currentSettings, isLoading } = useQuery<SettingsData>({
+  // Query para configurações gerais (do banco de dados)
+  const { data: currentGeneralSettings, isLoading: isLoadingGeneral } = useQuery<GeneralSettingsData>({
     queryKey: ["settings"],
     queryFn: async () => (await api.get("/settings")).data,
   });
 
-  useEffect(() => {
-    if (currentSettings) {
-      setSettings(currentSettings);
-    }
-  }, [currentSettings]);
-
-  const updateSettingsMutation = useMutation({
-    mutationFn: (newSettings: SettingsData) => api.put("/settings", newSettings).then(res => res.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardStats"] });
-      queryClient.invalidateQueries({ queryKey: ["stagnantStock"] });
-      toast.success("Configurações salvas com sucesso!");
-    },
-    onError: (error: any) => {
-        const errorMessage = error.response?.data?.message || error.message;
-        toast.error(`Erro ao salvar: ${errorMessage}`);
-    },
+  // Query para configurações da empresa (do arquivo JSON)
+  const { data: currentCompanySettings, isLoading: isLoadingCompany } = useQuery<CompanySettingsData>({
+    queryKey: ["companySettings"],
+    queryFn: async () => (await api.get("/company-settings")).data,
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => {
+    if (currentGeneralSettings) {
+      setGeneralSettings(currentGeneralSettings);
+    }
+  }, [currentGeneralSettings]);
+
+  useEffect(() => {
+    if (currentCompanySettings) {
+      setCompanySettings(currentCompanySettings);
+    }
+  }, [currentCompanySettings]);
+
+  // Mutação para salvar configurações GERAIS (no banco de dados)
+  const updateGeneralSettingsMutation = useMutation({
+    mutationFn: (newSettings: GeneralSettingsData) => api.put("/settings", newSettings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast.success("Configurações da loja e estoque salvas com sucesso!");
+    },
+    onError: (error: any) => toast.error(`Erro ao salvar: ${error.response?.data?.message || error.message}`),
+  });
+
+  // CORREÇÃO: Mutação dedicada para salvar configurações da EMPRESA (no arquivo JSON)
+  const updateCompanySettingsMutation = useMutation({
+    mutationFn: (newSettings: CompanySettingsData) => api.post("/company-settings", newSettings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["companySettings"] });
+      toast.success("Dados da empresa para documentos salvos com sucesso!");
+    },
+    onError: (error: any) => toast.error(`Erro ao salvar: ${error.response?.data?.message || error.message}`),
+  });
+
+  const handleGeneralChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setSettings(prev => ({ ...prev, [id]: value }));
+    setGeneralSettings(prev => ({ ...prev, [id]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCompanyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setCompanySettings(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleGeneralSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettingsMutation.mutate(settings);
+    updateGeneralSettingsMutation.mutate(generalSettings);
   };
 
-  if (isLoading) {
+  const handleCompanySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateCompanySettingsMutation.mutate(companySettings);
+  };
+
+  if (isLoadingGeneral || isLoadingCompany) {
     return <div>Carregando configurações...</div>;
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" />Configurações da Loja</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="store_name">Nome da Loja</Label>
-            <Input id="store_name" value={settings.store_name || ""} onChange={handleInputChange} placeholder="LENAMOM" />
-            <p className="text-sm text-muted-foreground mt-2">Este nome aparecerá no título da aba do navegador e em locais internos do sistema.</p>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      <form onSubmit={handleGeneralSubmit} className="space-y-8">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Store className="h-5 w-5" />Configurações da Loja</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="store_name">Nome da Loja</Label>
+              <Input id="store_name" value={generalSettings.store_name || ""} onChange={handleGeneralChange} placeholder="LENAMOM" />
+              <p className="text-sm text-muted-foreground mt-2">Este nome aparecerá no título da aba do navegador e em locais internos do sistema.</p>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" />Dados da Empresa para Documentos</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="company_name">Nome da Empresa</Label>
-            <Input id="company_name" value={settings.company_name || ""} onChange={handleInputChange} placeholder="LENAMOM JÓIAS E PERFUMARIA" />
-          </div>
-          <div>
-            <Label htmlFor="instagram">Instagram</Label>
-            <Input id="instagram" value={settings.instagram || ""} onChange={handleInputChange} placeholder="@lenamom.joias" />
-          </div>
-          <div>
-            <Label htmlFor="contact">Contato (Telefone/WhatsApp)</Label>
-            <Input id="contact" value={settings.contact || ""} onChange={handleInputChange} placeholder="(83) 98877-6655" />
-          </div>
-          <div>
-            <Label htmlFor="logo_url">URL do Logo (P&B)</Label>
-            <Input id="logo_url" value={settings.logo_url || ""} onChange={handleInputChange} placeholder="/logo_pb.png" />
-            <p className="text-sm text-muted-foreground mt-2">Caminho para a imagem do logo na pasta `public`. Ex: /meu-logo.png</p>
-          </div>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Archive className="h-5 w-5" />Configurações de Estoque</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="stagnant_stock_days">Dias para Alerta de Estoque Parado</Label>
+              <Input id="stagnant_stock_days" type="number" value={generalSettings.stagnant_stock_days || ""} onChange={handleGeneralChange} placeholder="90" />
+              <p className="text-sm text-muted-foreground mt-2">Produtos sem venda por este período aparecerão no alerta do dashboard.</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Button type="submit" disabled={updateGeneralSettingsMutation.isPending}>
+          {updateGeneralSettingsMutation.isPending ? 'Salvando...' : 'Salvar Configurações Gerais'}
+        </Button>
+      </form>
 
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Archive className="h-5 w-5" />Configurações de Estoque</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="stagnant_stock_days">Dias para Alerta de Estoque Parado</Label>
-            <Input id="stagnant_stock_days" type="number" value={settings.stagnant_stock_days || ""} onChange={handleInputChange} placeholder="90" />
-            <p className="text-sm text-muted-foreground mt-2">Produtos sem venda por este período aparecerão no alerta do dashboard.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Card de Impressão Removido */}
-
-      <Button type="submit" disabled={updateSettingsMutation.isPending}>
-        {updateSettingsMutation.isPending ? 'Salvando...' : 'Salvar Configurações Gerais'}
-      </Button>
-    </form>
+      <form onSubmit={handleCompanySubmit} className="space-y-8">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2"><Building className="h-5 w-5" />Dados da Empresa para Documentos</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="company_name">Nome da Empresa</Label>
+              <Input id="company_name" value={companySettings.company_name || ""} onChange={handleCompanyChange} placeholder="LENAMOM JÓIAS E PERFUMARIA" />
+            </div>
+            <div>
+              <Label htmlFor="instagram">Instagram</Label>
+              <Input id="instagram" value={companySettings.instagram || ""} onChange={handleCompanyChange} placeholder="@lenamom.joias" />
+            </div>
+            <div>
+              <Label htmlFor="contact">Contato (Telefone/WhatsApp)</Label>
+              <Input id="contact" value={companySettings.contact || ""} onChange={handleCompanyChange} placeholder="(83) 98877-6655" />
+            </div>
+            <div>
+              <Label htmlFor="logo_url">URL do Logo (P&B)</Label>
+              <Input id="logo_url" value={companySettings.logo_url || ""} onChange={handleCompanyChange} placeholder="/logo_pb.png" />
+              <p className="text-sm text-muted-foreground mt-2">Caminho para a imagem do logo na pasta `public`. Ex: /meu-logo.png</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Button type="submit" disabled={updateCompanySettingsMutation.isPending}>
+          {updateCompanySettingsMutation.isPending ? 'Salvando...' : 'Salvar Dados da Empresa'}
+        </Button>
+      </form>
+    </div>
   );
 }
 

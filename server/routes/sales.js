@@ -115,7 +115,6 @@ const generateReceiptTspl = (saleData) => {
     content += centerText("Obrigado pela preferencia!", y); y += 40;
     content += centerText("*** NAO E DOCUMENTO FISCAL ***", y);
     
-    // AJUSTE FINO: Adiciona um espaço extra (equivalente a uma linha) antes do corte.
     const finalHeight = y + 80; 
 
     tspl += `SIZE 80 mm, ${Math.ceil(finalHeight / 8)} mm\r\n`; 
@@ -224,11 +223,58 @@ router.post('/', protect, async (req, res) => {
 router.get('/:id/details', protect, async (req, res) => {
     const { id } = req.params;
     try {
-        const [[sale]] = await pool.query('SELECT s.id, s.sale_code, s.created_at as sale_date, s.total_amount, s.paid_amount, s.change_amount, s.shipping_cost, c.name as customer_name FROM sales s LEFT JOIN customers c ON s.customer_id = c.id WHERE s.id = ?', [id]);
-        if (!sale) return res.status(404).json({ message: 'Venda não encontrada.' });
+        // MELHORIA: Adiciona a forma de pagamento à consulta.
+        const query = `
+            SELECT 
+                s.id, s.sale_code, s.created_at as sale_date, s.total_amount, s.paid_amount, s.change_amount, s.shipping_cost,
+                c.name as customer_name,
+                c.phone as customer_phone,
+                c.address_street,
+                c.address_number,
+                c.address_neighborhood,
+                c.address_city,
+                c.address_state,
+                c.address_zipcode,
+                pm.description as payment_method_name
+            FROM sales s 
+            LEFT JOIN customers c ON s.customer_id = c.id
+            LEFT JOIN payment_methods pm ON s.payment_method_id = pm.id
+            WHERE s.id = ?
+        `;
+        
+        const [saleRows] = await pool.query(query, [id]);
+        if (saleRows.length === 0) {
+            return res.status(404).json({ message: 'Venda não encontrada.' });
+        }
+        const sale = saleRows[0];
+
         const [items] = await pool.query('SELECT si.*, p.description FROM sale_items si JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?', [id]);
-        res.status(200).json({ ...sale, items });
+        
+        let fullAddress = 'Endereço não informado';
+        if (sale.customer_name) {
+            const addressParts = [
+                sale.address_street,
+                sale.address_number,
+                sale.address_neighborhood,
+            ].filter(Boolean).join(', ');
+            
+            const cityStateZip = [
+                sale.address_city,
+                sale.address_state,
+            ].filter(Boolean).join(' - ') + (sale.address_zipcode ? `\nCEP: ${sale.address_zipcode}`: '');
+
+            fullAddress = [addressParts, cityStateZip].filter(Boolean).join('\n');
+        }
+
+        const saleDetails = {
+            ...sale,
+            customer_address: fullAddress,
+            customer_phone: sale.customer_phone || 'Telefone não informado',
+        };
+
+        res.status(200).json({ ...saleDetails, items });
     } catch (error) {
+        console.error("Erro ao buscar detalhes da venda:", error);
         res.status(500).json({ message: 'Erro ao buscar detalhes da venda.', error: error.message });
     }
 });

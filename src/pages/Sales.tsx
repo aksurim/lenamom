@@ -12,10 +12,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, XCircle, ChevronsUpDown, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { generateStandardPdf } from "@/lib/pdfUtils";
+// CORREÇÃO: Importa a nova função de geração de PDF
+import { generateSaleReceiptPdf, SaleReceiptData } from "@/lib/pdfUtils";
 import { sendTsplOverUsb } from "@/lib/usbPrinter";
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 // --- Tipos de Dados ---
 interface Product { id: number; code: string; barcode?: string; description: string; sale_price: number | string; stock_quantity: number; }
@@ -155,78 +154,20 @@ function PostSaleModal({ saleData, onClose }: { saleData: SaleDataForPrint | nul
         });
     };
 
+    // CORREÇÃO: Função simplificada para chamar a nova lógica de PDF.
     const handlePrintPdf = async () => {
         if (!saleData) return;
         try {
-            await generateStandardPdf({
-                fileName: `Pedido-${saleData.saleCode}`,
-                title: `Pedido de Venda #${saleData.saleCode}`,
-                drawContent: (doc: jsPDF, startY: number) => {
-                    const formatCurrency = (val: number | string) => 
-                        Number(val).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            // 1. Busca os dados completos e enriquecidos da venda.
+            const response = await api.get(`/sales/${saleData.saleId}/details`);
+            const fullSaleData: SaleReceiptData = response.data;
+            
+            // 2. Chama a função de geração de PDF centralizada.
+            await generateSaleReceiptPdf(fullSaleData);
 
-                    const tableHead = [['Produto', 'Qtd', 'Vl. Unit', 'Total']];
-                    const tableBody = saleData.items.map((item) => [
-                        item.description || 'Produto sem descrição',
-                        item.quantity.toString(),
-                        formatCurrency(item.unit_price || 0),
-                        formatCurrency(item.subtotal || 0),
-                    ]);
-
-                    autoTable(doc, {
-                        startY: startY + 5,
-                        head: tableHead,
-                        body: tableBody,
-                        theme: 'striped',
-                        headStyles: { fillColor: [66, 66, 66] },
-                        styles: { fontSize: 10 },
-                        columnStyles: {
-                            0: { cellWidth: 'auto' },
-                            1: { halign: 'center' },
-                            2: { halign: 'right' },
-                            3: { halign: 'right' }
-                        },
-                        margin: { left: 14, right: 14 }
-                    });
-
-                    // @ts-ignore
-                    const finalY = doc.lastAutoTable.finalY + 10;
-                    const pageWidth = doc.internal.pageSize.width;
-                    const marginR = 14;
-
-                    doc.setFontSize(10);
-                    
-                    const printRight = (text: string, y: number, isBold: boolean = false) => {
-                        doc.setFont("helvetica", isBold ? "bold" : "normal");
-                        doc.text(text, pageWidth - marginR, y, { align: 'right' });
-                    };
-
-                    let currentY = finalY;
-                    const lineHeight = 6;
-
-                    const subtotal = saleData.items.reduce((acc, i) => acc + Number(i.subtotal || 0), 0);
-                    
-                    printRight(`Subtotal: ${formatCurrency(subtotal)}`, currentY);
-                    currentY += lineHeight;
-
-                    if (Number(saleData.shipping_cost) > 0) {
-                         printRight(`Frete: ${formatCurrency(saleData.shipping_cost)}`, currentY);
-                         currentY += lineHeight;
-                    }
-
-                    doc.setFontSize(12);
-                    printRight(`TOTAL: ${formatCurrency(saleData.total_amount)}`, currentY + 2, true);
-                    currentY += lineHeight + 5;
-
-                    doc.setFontSize(10);
-                    printRight(`Forma de Pagamento: ${saleData.paymentMethod.description}`, currentY);
-                    currentY += lineHeight;
-                    printRight(`Valor Pago: ${formatCurrency(saleData.paid_amount)}`, currentY);
-                }
-            });
         } catch (error) {
             console.error("Erro ao gerar recibo PDF:", error);
-            toast.error("Falha ao gerar recibo PDF.");
+            toast.error("Falha ao buscar dados da venda para gerar o PDF.");
         }
     };
 
@@ -239,7 +180,7 @@ function PostSaleModal({ saleData, onClose }: { saleData: SaleDataForPrint | nul
                 </DialogHeader>
                 <DialogFooter className="pt-4 flex-col sm:flex-row sm:justify-end gap-2">
                     <Button variant="outline" onClick={onClose}>Fechar</Button>
-                    <Button onClick={handlePrintPdf} disabled={isPrinting}>Gerar PDF A4</Button>
+                    <Button onClick={handlePrintPdf}>Gerar PDF A4</Button>
                     <Button onClick={handlePrintReceipt} disabled={isPrinting}>{isPrinting ? "Imprimindo..." : "Imprimir Cupom (USB)"}</Button>
                 </DialogFooter>
             </DialogContent>
@@ -279,7 +220,6 @@ export default function Sales() {
       const response = await api.post("/sales", payload);
       const result = response.data;
       
-      // Monta o objeto para o PostSaleModal
       const dataForModal: SaleDataForPrint = {
         saleId: result.saleId,
         saleCode: result.saleCode,

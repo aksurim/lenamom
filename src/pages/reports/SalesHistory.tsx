@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FileText, FileDown } from "lucide-react";
 import { toast } from "sonner";
-import { generateStandardPdf } from "@/lib/pdfUtils"; // <-- Corrigido
+// CORREÇÃO: Importa a nova função de geração de PDF e a antiga para a lista.
+import { generateSaleReceiptPdf, generateStandardPdf, SaleReceiptData } from "@/lib/pdfUtils";
 import autoTable from 'jspdf-autotable';
 
 // --- Tipos de Dados ---
@@ -16,28 +17,7 @@ interface SaleHistoryRow {
   sale_code: string;
   sale_date: string;
   total_amount: number | string;
-  paid_amount: number | string;
-  change_amount: number | string;
-  shipping_cost: number | string;
   customer_name: string | null;
-  customer_document?: string;
-  customer_address_street?: string;
-  customer_address_number?: string;
-  customer_address_neighborhood?: string;
-  customer_address_city?: string;
-  customer_address_state?: string;
-}
-
-interface SaleItemForReceipt {
-  description: string;
-  quantity: number;
-  unit_price: number | string;
-  subtotal: number | string;
-  code: string;
-}
-
-interface SaleDetails extends SaleHistoryRow {
-  items: SaleItemForReceipt[];
 }
 
 // --- Componente Principal ---
@@ -68,77 +48,16 @@ export default function SalesHistory() {
     }
   };
 
-  const handleReprintReceipt = async (sale: SaleHistoryRow) => {
-    setGeneratingPdfId(sale.id);
+  // CORREÇÃO: Função simplificada para chamar a nova lógica de PDF.
+  const handleReprintReceipt = async (saleId: number) => {
+    setGeneratingPdfId(saleId);
     try {
-      const response = await api.get<SaleDetails>(`/sales/${sale.id}/details`);
-      const saleDetails = response.data;
-
-      await generateStandardPdf({
-        fileName: `Pedido-${saleDetails.sale_code}`,
-        title: `Pedido de Venda`,
-        drawContent: (doc, startY) => {
-          let currentY = startY;
-          const margin = 15;
-          const pageW = doc.internal.pageSize.getWidth();
-
-          if (saleDetails.customer_name) {
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'bold');
-            doc.text("DADOS DO CLIENTE", margin, currentY);
-            currentY += 5;
-            doc.setLineWidth(0.1);
-            doc.rect(margin, currentY, pageW - (margin * 2), 22);
-            currentY += 5;
-            doc.setFont('helvetica', 'normal');
-            const customerAddress = `${sale.customer_address_street || ''}, ${sale.customer_address_number || ''} - ${sale.customer_address_neighborhood || ''}`;
-            doc.text(`Nome: ${sale.customer_name}`, margin + 2, currentY);
-            doc.text(`CPF/CNPJ: ${sale.customer_document || 'Não informado'}`, margin + 100, currentY);
-            currentY += 7;
-            doc.text(`Endereço: ${customerAddress}`, margin + 2, currentY);
-            currentY += 7;
-            doc.text(`Cidade: ${sale.customer_address_city || ''} - ${sale.customer_address_state || ''}`, margin + 2, currentY);
-            currentY += 10;
-          }
-
-          autoTable(doc, {
-            head: [['CÓDIGO', 'DESCRIÇÃO', 'QTD.', 'VL. UNIT.', 'SUBTOTAL']],
-            body: saleDetails.items.map(item => [
-              (item as any).code || 'N/A', // Assuming item has a code
-              item.description,
-              item.quantity,
-              Number(item.unit_price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
-              Number(item.subtotal || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-            ]),
-            startY: currentY,
-            theme: 'grid',
-            headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
-            styles: { fontSize: 9, cellPadding: 2 },
-            columnStyles: { 4: { halign: 'right' } }
-          });
-
-          let finalY = (doc as any).lastAutoTable.finalY + 10;
-          const subtotal = saleDetails.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-          const summaryX = pageW - margin - 70;
-          doc.setFontSize(10);
-          doc.setFont('helvetica', 'bold');
-          doc.text("RESUMO FINANCEIRO", summaryX, finalY);
-          finalY += 5;
-          doc.setLineWidth(0.1);
-          doc.rect(summaryX - 2, finalY, 72, 20);
-          finalY += 5;
-          doc.setFont('helvetica', 'normal');
-          doc.text("Subtotal:", summaryX, finalY);
-          doc.text(subtotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), summaryX + 68, finalY, { align: 'right' });
-          finalY += 7;
-          doc.text("Frete:", summaryX, finalY);
-          doc.text(Number(saleDetails.shipping_cost || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), summaryX + 68, finalY, { align: 'right' });
-          finalY += 7;
-          doc.setFont('helvetica', 'bold');
-          doc.text("TOTAL:", summaryX, finalY);
-          doc.text(Number(saleDetails.total_amount).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), summaryX + 68, finalY, { align: 'right' });
-        }
-      });
+      // 1. Busca os dados completos e enriquecidos da venda.
+      const response = await api.get(`/sales/${saleId}/details`);
+      const fullSaleData: SaleReceiptData = response.data;
+      
+      // 2. Chama a função de geração de PDF centralizada.
+      await generateSaleReceiptPdf(fullSaleData);
 
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || error.message;
@@ -158,7 +77,7 @@ export default function SalesHistory() {
     const formattedEndDate = endDate.toLocaleDateString('pt-BR');
     const totalAmount = reportData.reduce((sum, sale) => sum + Number(sale.total_amount || 0), 0);
 
-    generateStandardPdf({ // <-- Corrigido
+    generateStandardPdf({
       fileName: `Historico_Vendas_${formattedStartDate}_a_${formattedEndDate}`,
       title: "Relatório de Histórico de Vendas",
       drawContent: (doc, startY) => {
@@ -223,7 +142,7 @@ export default function SalesHistory() {
                         <TableCell>{new Date(sale.sale_date.replace(' ', 'T')).toLocaleString('pt-BR')}</TableCell>
                         <TableCell className="text-right">{Number(sale.total_amount || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
                         <TableCell className="text-center">
-                          <Button variant="outline" size="sm" onClick={() => handleReprintReceipt(sale)} disabled={generatingPdfId === sale.id}>
+                          <Button variant="outline" size="sm" onClick={() => handleReprintReceipt(sale.id)} disabled={generatingPdfId === sale.id}>
                             <FileText className="h-4 w-4 mr-2" />
                             {generatingPdfId === sale.id ? 'Gerando...' : 'Reimprimir Pedido'}
                           </Button>
