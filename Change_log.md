@@ -4,6 +4,13 @@
 
 ## Registros
 
+- **2024-08-10 - MÓDULO: Frontend/Backend (Relatórios)**
+  - **TAREFA:** Adicionar filtro por fornecedor ao relatório de "Balanço de Estoque".
+  - **MELHORIAS:**
+    1.  **Backend:** A rota `/api/reports/stock-balance` foi modificada para aceitar um `supplierId` como parâmetro de query, filtrando os resultados. A rota também foi ajustada para incluir produtos com estoque zerado ou negativo, tornando o inventário mais preciso.
+    2.  **Frontend:** A página `StockBalance.tsx` foi atualizada para incluir um dropdown de seleção de fornecedores, que atualiza dinamicamente os dados do relatório ao ser alterado.
+  - **STATUS:** Concluído
+
 - **2024-08-10 - MÓDULO: Frontend/Backend (Busca de Estoque)**
   - **ERRO:** A busca de produtos na tela de "Entrada de Estoque" não encontrava produtos com estoque zerado ou negativo.
   - **CAUSA RAIZ:** A tela de Estoque estava utilizando a mesma rota da API de Vendas (`/api/products/search`), que por design filtra produtos com `stock_quantity > 0`.

@@ -33,6 +33,10 @@ O **Sistema de Gestão LENAMOM** é uma aplicação web robusta que centraliza a
     -   Entrada e Saída manual de produtos.
     -   Busca de produtos otimizada para o contexto de estoque (incluindo itens zerados).
     -   Histórico detalhado de todas as movimentações.
+-   **Relatórios Gerenciais:**
+    -   **Balanço de Estoque:** Relatório detalhado com valores de custo, potencial de venda e **filtro por fornecedor**.
+    -   **Vendas por Período:** Histórico de vendas com totalizadores.
+    -   **Vendas por Produto:** Ranking de produtos mais vendidos.
 -   **Arquitetura de Impressão Híbrida:**
     -   **Geração de Layout no Backend (TSPL):** O servidor gera o comando de impressão na linguagem nativa da impressora, garantindo layouts precisos para cupons e etiquetas.
     -   **Impressão Direta via WebUSB:** O frontend envia os comandos diretamente para a impressora USB, eliminando a necessidade de drivers complexos.

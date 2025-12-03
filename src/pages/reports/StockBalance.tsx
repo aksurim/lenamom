@@ -4,9 +4,11 @@ import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { FileDown, DollarSign, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-import { generateStandardPdf } from "@/lib/pdfUtils"; // <-- Corrigido
+import { generateStandardPdf } from "@/lib/pdfUtils";
 import autoTable from 'jspdf-autotable';
 
 // --- Tipos de Dados ---
@@ -28,6 +30,11 @@ interface StockBalanceReport {
   };
 }
 
+interface Supplier {
+  id: number;
+  name: string;
+}
+
 interface StockForCountingProduct {
   code: string;
   description: string;
@@ -40,10 +47,23 @@ const formatCurrency = (value: number) => (value || 0).toLocaleString('pt-BR', {
 // --- Componente Principal ---
 export default function StockBalance() {
   const [isGeneratingCountSheet, setIsGeneratingCountSheet] = useState(false);
+  const [selectedSupplier, setSelectedSupplier] = useState<string>('all');
 
+  // Query para buscar os fornecedores para o filtro
+  const { data: suppliers } = useQuery<Supplier[]>({
+    queryKey: ["suppliers"],
+    queryFn: async () => (await api.get("/suppliers")).data,
+  });
+
+  // Query principal, agora dependente do fornecedor selecionado
   const { data, isLoading, error } = useQuery<StockBalanceReport>({
-    queryKey: ["stockBalance"],
-    queryFn: async () => (await api.get("/reports/stock-balance")).data,
+    queryKey: ["stockBalance", selectedSupplier], // Adiciona o filtro à chave da query
+    queryFn: async () => {
+      const response = await api.get("/reports/stock-balance", {
+        params: { supplierId: selectedSupplier }, // Passa o filtro como parâmetro
+      });
+      return response.data;
+    },
   });
 
   if (error) {
@@ -57,7 +77,7 @@ export default function StockBalance() {
       const response = await api.get<StockForCountingProduct[]>("/reports/stock-for-counting");
       const productsForCounting = response.data;
 
-      generateStandardPdf({ // <-- Corrigido
+      generateStandardPdf({
         fileName: `Folha_Contagem_Estoque_${new Date().toISOString().split('T')[0]}`,
         title: "Folha de Contagem de Estoque",
         drawContent: (doc, startY) => {
@@ -85,7 +105,25 @@ export default function StockBalance() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-foreground">Balanço de Estoque</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-3xl font-bold text-foreground">Balanço de Estoque</h2>
+        <div className="w-full max-w-sm">
+          <Label htmlFor="supplier-filter">Filtrar por Fornecedor</Label>
+          <Select value={selectedSupplier} onValueChange={setSelectedSupplier}>
+            <SelectTrigger id="supplier-filter">
+              <SelectValue placeholder="Selecione um fornecedor..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Fornecedores</SelectItem>
+              {suppliers?.map(supplier => (
+                <SelectItem key={supplier.id} value={supplier.id.toString()}>
+                  {supplier.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
       {/* Seção de Balanço Financeiro */}
       <div className="grid gap-4 md:grid-cols-2">
@@ -100,7 +138,7 @@ export default function StockBalance() {
             ) : (
               <div className="text-2xl font-bold">{formatCurrency(data?.totals.totalCost || 0)}</div>
             )}
-            <p className="text-xs text-muted-foreground">Valor investido em produtos no estoque.</p>
+            <p className="text-xs text-muted-foreground">Valor investido nos produtos filtrados.</p>
           </CardContent>
         </Card>
         <Card>
@@ -114,7 +152,7 @@ export default function StockBalance() {
             ) : (
               <div className="text-2xl font-bold">{formatCurrency(data?.totals.totalSale || 0)}</div>
             )}
-            <p className="text-xs text-muted-foreground">Receita total se todo o estoque for vendido.</p>
+            <p className="text-xs text-muted-foreground">Receita total se o estoque filtrado for vendido.</p>
           </CardContent>
         </Card>
       </div>
@@ -140,7 +178,7 @@ export default function StockBalance() {
                     </TableRow>
                   ))
                 ) : (
-                  <TableRow><TableCell colSpan={6} className="text-center">Nenhum produto em estoque.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center">Nenhum produto encontrado para o filtro selecionado.</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>

@@ -2,7 +2,7 @@
 
 *Este arquivo contém o passo-a-passo das tarefas a serem executadas no projeto. Marque os itens como concluídos apenas após a validação final.*
 
-## Fase 6: Correções e Melhorias de Estoque (Sessão Atual)
+## Fase 6: Correções e Melhorias de Estoque e UI (Sessão Atual)
 
 - [x] **Melhorar UI da Entrada de Estoque:** Substituir o dropdown de seleção de produtos por um campo de busca inteligente.
   - [x] Reutilizar o componente `ProductSearch` da tela de Vendas na página `StockEntry.tsx`.
@@ -16,6 +16,11 @@
 - [x] **Corrigir Lógica de Busca de Produtos para Estoque:** Permitir a busca de produtos com estoque zerado ou negativo na tela de entrada.
   - [x] Criar uma nova rota no backend (`/api/products/search-for-stock`) que não filtra por `stock_quantity`.
   - [x] Atualizar o `ProductSearch` em `StockEntry.tsx` para usar a nova rota.
+- [x] **Melhorar Relatório de Balanço de Estoque:** Adicionar filtro por fornecedor.
+  - [x] Alterar a API (`/reports/stock-balance`) para aceitar um `supplierId`.
+  - [x] Adicionar um dropdown de fornecedores na UI do relatório.
+- [x] **Ajustar Título da Aplicação:** Corrigir o título exibido na aba do navegador.
+  - [x] Modificar a tag `<title>` no arquivo `index.html`.
 
 ## Fase 5: Modernização do PDF de Venda
 

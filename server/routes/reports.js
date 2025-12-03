@@ -43,14 +43,37 @@ router.get('/sales-by-product', async (req, res) => {
 });
 
 router.get('/stock-balance', async (req, res) => {
+    const { supplierId } = req.query; // Pega o ID do fornecedor da query
     try {
-        const query = `SELECT code, description, stock_quantity, cost_price, sale_price, (stock_quantity * cost_price) as total_cost_value, (stock_quantity * sale_price) as total_sale_value FROM products WHERE is_active = TRUE AND stock_quantity > 0 ORDER BY description ASC`;
-        const [products] = await pool.query(query);
+        let query = `
+            SELECT 
+                code, 
+                description, 
+                stock_quantity, 
+                cost_price, 
+                sale_price, 
+                (stock_quantity * cost_price) as total_cost_value, 
+                (stock_quantity * sale_price) as total_sale_value 
+            FROM products 
+            WHERE is_active = TRUE`;
+        
+        const params = [];
+
+        if (supplierId && supplierId !== 'all') {
+            query += ` AND supplier_id = ?`;
+            params.push(supplierId);
+        }
+
+        query += ` ORDER BY description ASC`;
+
+        const [products] = await pool.query(query, params);
+        
         const totals = products.reduce((acc, product) => {
-            acc.totalCost += parseFloat(product.total_cost_value);
-            acc.totalSale += parseFloat(product.total_sale_value);
+            acc.totalCost += parseFloat(product.total_cost_value) || 0;
+            acc.totalSale += parseFloat(product.total_sale_value) || 0;
             return acc;
         }, { totalCost: 0, totalSale: 0 });
+
         res.status(200).json({ products, totals });
     } catch (error) {
         res.status(500).json({ message: 'Erro ao gerar relatório de balanço de estoque.', error: error.message });
