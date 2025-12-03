@@ -4,6 +4,21 @@
 
 ## Registros
 
+- **2024-08-10 - MÓDULO: Frontend/Backend (Busca de Estoque)**
+  - **ERRO:** A busca de produtos na tela de "Entrada de Estoque" não encontrava produtos com estoque zerado ou negativo.
+  - **CAUSA RAIZ:** A tela de Estoque estava utilizando a mesma rota da API de Vendas (`/api/products/search`), que por design filtra produtos com `stock_quantity > 0`.
+  - **SOLUÇÃO:**
+    1.  **Backend:** Foi criada uma nova rota dedicada, `/api/products/search-for-stock`, que busca produtos sem a restrição de quantidade em estoque.
+    2.  **Frontend:** O componente de busca na página `StockEntry.tsx` foi atualizado para consumir a nova rota, corrigindo a lógica de negócio.
+  - **STATUS:** Concluído
+
+- **2024-08-10 - MÓDULO: Backend/Estoque (`stock-movements`)**
+  - **ERRO:** Ao registrar uma nova movimentação de estoque, a API retornava `Erro 500 (Internal Server Error)`.
+  - **CAUSA RAIZ:** A instrução `INSERT` no arquivo `server/routes/stock-movements.js` tentava inserir um valor na coluna `user_id`, que não existe na tabela `stock_movements` do banco de dados. A presunção da estrutura da tabela pelo agente causou a falha.
+  - **SOLUÇÃO:** A query `INSERT` foi corrigida, removendo a coluna `user_id` para alinhar o código com a estrutura real da tabela.
+  - **AÇÃO ADICIONAL:** Uma nova regra foi adicionada ao `Regras_Projeto.md` para exigir a verificação da estrutura do banco de dados antes de codificar interações com ele.
+  - **STATUS:** Concluído
+
 - **2024-08-09 - MÓDULO: Frontend/Backend (Modernização do PDF de Venda)**
   - **TAREFA:** Modernizar o PDF de venda (A4) para um layout profissional, unificando a geração para a pós-venda e a reimpressão do histórico.
   - **MELHORIAS:**

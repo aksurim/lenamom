@@ -103,7 +103,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/products/search - Rota pública para buscar produtos
+// GET /api/products/search - Rota para busca na TELA DE VENDAS
 router.get('/search', async (req, res) => {
   const query = req.query.q || '';
   if (query.length < 2) return res.status(200).json([]);
@@ -113,6 +113,20 @@ router.get('/search', async (req, res) => {
     res.status(200).json(rows);
   } catch (error) {
     res.status(500).json({ message: 'Erro ao buscar produtos', error: error.message });
+  }
+});
+
+// GET /api/products/search-for-stock - Rota para busca na TELA DE ESTOQUE
+router.get('/search-for-stock', protect, async (req, res) => {
+  const query = req.query.q || '';
+  if (query.length < 2) return res.status(200).json([]);
+  try {
+    const searchQuery = `%${query}%`;
+    // Mesma busca, mas SEM a restrição de 'stock_quantity > 0'
+    const [rows] = await pool.query('SELECT * FROM products WHERE (code LIKE ? OR description LIKE ? OR barcode LIKE ?) AND is_active = TRUE LIMIT 10', [searchQuery, searchQuery, searchQuery]);
+    res.status(200).json(rows);
+  } catch (error) {
+    res.status(500).json({ message: 'Erro ao buscar produtos para estoque', error: error.message });
   }
 });
 
