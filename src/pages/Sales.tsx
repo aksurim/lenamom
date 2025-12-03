@@ -21,11 +21,11 @@ interface Product { id: number; code: string; barcode?: string; description: str
 interface Customer { id: number; name: string; document?: string; phone?: string; }
 interface PaymentMethod { id: number; description: string; }
 interface SaleItem extends Product { quantity: number; unit_price: number; subtotal: number; }
-type SaleDataForPrint = { 
-    saleId: number; 
-    saleCode: string; 
-    customer: Customer; 
-    paymentMethod: PaymentMethod; 
+type SaleDataForPrint = {
+    saleId: number;
+    saleCode: string;
+    customer: Customer;
+    paymentMethod: PaymentMethod;
     items: SaleItem[];
     total_amount: number;
     paid_amount: number;
@@ -43,7 +43,7 @@ function PriceInput({ value, onChange }: { value: number; onChange: (newValue: n
     };
     return <Input type="text" value={displayValue} onChange={(e) => setDisplayValue(e.target.value)} onBlur={handleBlur} className="w-24 text-right" />;
 }
-  
+
 function ProductSearch({ onProductSelect }: { onProductSelect: (product: Product) => void }) {
     const [open, setOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
@@ -56,18 +56,18 @@ function ProductSearch({ onProductSelect }: { onProductSelect: (product: Product
       },
       enabled: searchQuery.length > 1,
     });
-  
+
     useEffect(() => {
       if (!isLoading && products && products.length === 1 && products[0].barcode === searchQuery) {
         handleSelect(products[0]);
       }
     }, [products, isLoading, searchQuery]);
-  
+
     const handleSelect = (product: Product) => { onProductSelect(product); setSearchQuery(""); setOpen(false); };
-  
+
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between">Buscar por código, descrição ou cód. de barras...<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+        <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between">Buscar por código ou descrição...<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0"><Command>
           <CommandInput placeholder="Buscar produto..." onValueChange={setSearchQuery} />
           <CommandList>
@@ -79,27 +79,27 @@ function ProductSearch({ onProductSelect }: { onProductSelect: (product: Product
       </Popover>
     );
 }
-  
+
 function CheckoutModal({ isOpen, onClose, totalAmount, onConfirm, isPending }: { isOpen: boolean; onClose: () => void; totalAmount: number; onConfirm: (details: any) => void; isPending: boolean; }) {
     const [customerId, setCustomerId] = useState('');
     const [paymentMethodId, setPaymentMethodId] = useState('');
     const [paidAmount, setPaidAmount] = useState("");
-  
+
     const { data: customers } = useQuery<Customer[]>({ queryKey: ["customers"], queryFn: async () => (await api.get("/customers")).data });
     const { data: paymentMethods } = useQuery<PaymentMethod[]>({ queryKey: ["payment-methods"], queryFn: async () => (await api.get("/payment-methods")).data });
-  
+
     const changeAmount = useMemo(() => (parseFloat(paidAmount.replace(',', '.')) || 0) - totalAmount, [paidAmount, totalAmount]);
-  
+
     useEffect(() => { if(isOpen) setPaidAmount(totalAmount.toFixed(2).replace('.', ',')); }, [isOpen, totalAmount]);
-  
+
     const handleConfirm = () => {
       if (!paymentMethodId) { toast.error("Selecione uma forma de pagamento."); return; }
       const finalPaidAmount = parseFloat(paidAmount.replace(',', '.')) || 0;
       if (finalPaidAmount < totalAmount) { toast.error("O valor pago não pode ser menor que o total do pedido."); return; }
-  
+
       const customer = customers?.find(c => c.id.toString() === customerId);
       const paymentMethod = paymentMethods?.find(p => p.id.toString() === paymentMethodId);
-  
+
       onConfirm({
         customer_id: customerId ? parseInt(customerId) : null,
         payment_method_id: parseInt(paymentMethodId),
@@ -109,7 +109,7 @@ function CheckoutModal({ isOpen, onClose, totalAmount, onConfirm, isPending }: {
         paymentMethod: paymentMethod,
       });
     };
-  
+
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent>
@@ -161,7 +161,7 @@ function PostSaleModal({ saleData, onClose }: { saleData: SaleDataForPrint | nul
             // 1. Busca os dados completos e enriquecidos da venda.
             const response = await api.get(`/sales/${saleData.saleId}/details`);
             const fullSaleData: SaleReceiptData = response.data;
-            
+
             // 2. Chama a função de geração de PDF centralizada.
             await generateSaleReceiptPdf(fullSaleData);
 
@@ -219,7 +219,7 @@ export default function Sales() {
       };
       const response = await api.post("/sales", payload);
       const result = response.data;
-      
+
       const dataForModal: SaleDataForPrint = {
         saleId: result.saleId,
         saleCode: result.saleCode,

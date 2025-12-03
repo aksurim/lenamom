@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAuth } from "@/contexts/AuthContext"; // Importar useAuth
+import { useAuth } from "@/contexts/AuthContext";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +23,28 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Plus } from "lucide-react";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Plus, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 
 // --- Tipos de Dados ---
 interface Product {
   id: number;
+  code: string;
+  barcode?: string;
   description: string;
+  sale_price: number | string;
+  stock_quantity: number;
 }
 
 interface StockMovement {
@@ -48,9 +57,71 @@ interface StockMovement {
   movement_date: string;
 }
 
+// --- Componente de Busca de Produto (Reutilizado de Sales.tsx) ---
+function ProductSearch({ onProductSelect, selectedProduct }: { onProductSelect: (product: Product | null) => void; selectedProduct: Product | null; }) {
+    const [open, setOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const { data: products, isLoading } = useQuery<Product[]>({
+      queryKey: ["products_search_stock", searchQuery],
+      queryFn: async () => {
+        if (searchQuery.length < 2) return [];
+        // CORREÇÃO: Usar a nova API de busca que não filtra por estoque
+        const response = await api.get("/products/search-for-stock", { params: { q: searchQuery } });
+        return response.data;
+      },
+      enabled: searchQuery.length > 1,
+    });
+
+    useEffect(() => {
+      if (!isLoading && products && products.length === 1 && products[0].barcode === searchQuery) {
+        handleSelect(products[0]);
+      }
+    }, [products, isLoading, searchQuery]);
+
+    const handleSelect = (product: Product) => {
+      onProductSelect(product);
+      setSearchQuery("");
+      setOpen(false);
+    };
+
+    const triggerText = selectedProduct
+      ? `${selectedProduct.code} - ${selectedProduct.description}`
+      : "Buscar por código ou descrição...";
+
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button variant="outline" role="combobox" className="w-full justify-between">
+            {triggerText}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+          <Command>
+            <CommandInput placeholder="Buscar produto..." onValueChange={setSearchQuery} />
+            <CommandList>
+              {isLoading && <CommandItem disabled>Buscando...</CommandItem>}
+              {!isLoading && !products?.length && searchQuery.length > 1 && <CommandItem disabled>Nenhum produto encontrado.</CommandItem>}
+              <CommandGroup>
+                {products?.map((product) => (
+                  <CommandItem key={product.id} onSelect={() => handleSelect(product)} value={`${product.code} - ${product.description}`}>
+                    {product.code} - {product.description}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    );
+}
+
+
 export default function StockEntry() {
-  const { user } = useAuth(); // Obter usuário do contexto
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState({
     product_id: "",
     quantity: "",
@@ -60,21 +131,17 @@ export default function StockEntry() {
   const queryClient = useQueryClient();
   const isAdmin = user?.perfil === 'admin';
 
-  const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>(({
-    queryKey: ["products"],
-    queryFn: async () => (await api.get("/products?includeInactive=true")).data,
-  }));
-
-  const { data: stockMovements, isLoading: isLoadingMovements } = useQuery<StockMovement[]>(({
+  const { data: stockMovements, isLoading: isLoadingMovements } = useQuery<StockMovement[]>({
     queryKey: ["stock_movements"],
-    queryFn: async () => (await api.get("/sales/stock-movements")).data,
-  }));
+    queryFn: async () => (await api.get("/stock-movements")).data,
+  });
 
   const createMovementMutation = useMutation({
-    mutationFn: (newData: typeof formData) => api.post("/sales/stock-movements", newData).then(res => res.data),
+    mutationFn: (newData: typeof formData) => api.post("/stock-movements", newData).then(res => res.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stock_movements"] });
       queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["products_search_stock"] }); // Invalida a busca também
       toast.success("Movimentação de estoque registrada com sucesso!");
       handleClose();
     },
@@ -84,8 +151,14 @@ export default function StockEntry() {
     },
   });
 
+  const handleProductSelect = (product: Product | null) => {
+    setSelectedProduct(product);
+    setFormData(prev => ({ ...prev, product_id: product ? product.id.toString() : "" }));
+  };
+
   const handleClose = () => {
     setOpen(false);
+    setSelectedProduct(null);
     setFormData({ product_id: "", quantity: "", observation: "" });
   };
 
@@ -93,7 +166,6 @@ export default function StockEntry() {
     e.preventDefault();
     const quantityNum = parseInt(formData.quantity, 10);
 
-    // Adicionar validação de permissão no frontend
     if (!isAdmin && quantityNum < 0) {
       toast.error("Permissão negada. Apenas administradores podem registrar saídas de estoque.");
       return;
@@ -130,20 +202,7 @@ export default function StockEntry() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <Label htmlFor="product">Produto</Label>
-                <Select value={formData.product_id} onValueChange={(value) => setFormData({ ...formData, product_id: value })}>
-                  <SelectTrigger id="product"><SelectValue placeholder="Selecione um produto..." /></SelectTrigger>
-                  <SelectContent>
-                    {isLoadingProducts ? (
-                      <SelectItem value="loading" disabled>Carregando...</SelectItem>
-                    ) : (
-                      products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id.toString()}>
-                          {product.description}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <ProductSearch onProductSelect={handleProductSelect} selectedProduct={selectedProduct} />
               </div>
               <div>
                 <Label htmlFor="quantity">Quantidade</Label>
@@ -153,7 +212,6 @@ export default function StockEntry() {
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                   required
-                  // Placeholder e 'min' dinâmicos baseados no perfil
                   min={!isAdmin ? "0" : undefined}
                   placeholder={
                     isAdmin

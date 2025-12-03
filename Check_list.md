@@ -2,6 +2,21 @@
 
 *Este arquivo contém o passo-a-passo das tarefas a serem executadas no projeto. Marque os itens como concluídos apenas após a validação final.*
 
+## Fase 6: Correções e Melhorias de Estoque (Sessão Atual)
+
+- [x] **Melhorar UI da Entrada de Estoque:** Substituir o dropdown de seleção de produtos por um campo de busca inteligente.
+  - [x] Reutilizar o componente `ProductSearch` da tela de Vendas na página `StockEntry.tsx`.
+- [x] **Corrigir Bug Crítico ao Salvar Entrada de Estoque:** Resolver o erro 404 que impedia o registro de novas movimentações.
+  - [x] Criar o arquivo de rotas `server/routes/stock-movements.js` com a lógica de GET e POST.
+  - [x] Registrar a nova rota `/api/stock-movements` no `server/index.js`.
+  - [x] Corrigir as chamadas da API no frontend (`StockEntry.tsx`) para usar a URL correta.
+- [x] **Corrigir Bug 500 ao Salvar Entrada de Estoque:** Resolver o erro de servidor causado por incompatibilidade com o banco de dados.
+  - [x] Investigar e identificar a coluna `user_id` como a causa da falha no `INSERT`.
+  - [x] Remover a coluna `user_id` da query na rota `POST /api/stock-movements`.
+- [x] **Corrigir Lógica de Busca de Produtos para Estoque:** Permitir a busca de produtos com estoque zerado ou negativo na tela de entrada.
+  - [x] Criar uma nova rota no backend (`/api/products/search-for-stock`) que não filtra por `stock_quantity`.
+  - [x] Atualizar o `ProductSearch` em `StockEntry.tsx` para usar a nova rota.
+
 ## Fase 5: Modernização do PDF de Venda
 
 - [x] **Modernizar Layout do PDF de Venda:** Unificar e redesenhar o PDF de recibo de venda para um padrão profissional.
