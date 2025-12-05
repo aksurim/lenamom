@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/23961197/README.md)
 <div align="center">
   <h1 align="center">Sistema de Gestão LENAMOM</h1>
   <p align="center">
@@ -11,7 +10,6 @@
 ![Node.js](https://img.shields.io/badge/Node.js-18.x-green.svg)
 ![React](https://img.shields.io/badge/React-18-blue.svg)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-orange.svg)
-![Licença](https://img.shields.io/badge/Licen%C3%A7a-MIT-green.svg)
 
 </div>
 
@@ -19,7 +17,7 @@
 
 ## 🎯 Sobre o Projeto
 
-O **Sistema de Gestão LENAMOM** é uma aplicação web robusta que centraliza as operações de um negócio de varejo, oferecendo ferramentas intuitivas para o gerenciamento de clientes (CRM), produtos, estoque e vendas. O projeto se destaca por sua arquitetura de impressão híbrida, que resolve problemas crônicos de compatibilidade de hardware ao comunicar-se diretamente com impressoras térmicas via WebUSB.
+O **Sistema de Gestão LENAMOM** é uma aplicação web robusta que centraliza as operações de um negócio de varejo, oferecendo ferramentas intuitivas para o gerenciamento de clientes (CRM), produtos, estoque e um módulo financeiro completo com suporte a vendas parceladas. O projeto se destaca por sua arquitetura de impressão híbrida, que resolve problemas crônicos de compatibilidade de hardware ao comunicar-se diretamente com impressoras térmicas via WebUSB.
 
 ---
 
@@ -30,19 +28,26 @@ O **Sistema de Gestão LENAMOM** é uma aplicação web robusta que centraliza a
     -   Interface rápida para adicionar produtos ao carrinho.
     -   Busca inteligente de produtos por código ou descrição.
     -   Cálculo de totais, frete, troco e finalização de compra.
+-   **Módulo Financeiro Avançado:**
+    -   **Vendas Parceladas:** Na finalização da venda, o sistema permite configurar o número de parcelas, intervalo de dias e valor de entrada.
+    -   **Geração Automática:** Criação automática de todas as parcelas no Contas a Receber.
+    -   **Visão Consolidada:** Tela de Contas a Receber que agrupa as dívidas por cliente, com status de `EM ATRASO`, `À VENCER` e `QUITADO`.
+    -   **Gestão de Parcelas:** Tela de detalhes para visualizar e quitar cada parcela individualmente.
+    -   **Recibo de Quitação:** Geração de recibos em PDF para cada pagamento de parcela.
+    -   **Movimento de Caixa:** Integração total das vendas e quitações com o fluxo de caixa.
 -   **Módulo de Estoque:**
     -   Entrada e Saída manual de produtos.
-    -   Busca de produtos otimizada para o contexto de estoque (incluindo itens zerados).
+    -   Busca de produtos otimizada para o contexto de estoque.
     -   Histórico detalhado de todas as movimentações.
 -   **Relatórios Gerenciais:**
     -   **Balanço de Estoque:** Relatório detalhado com valores de custo, potencial de venda e **filtro por fornecedor**.
     -   **Vendas por Período:** Histórico de vendas com totalizadores.
     -   **Vendas por Produto:** Ranking de produtos mais vendidos.
 -   **Arquitetura de Impressão Híbrida:**
-    -   **Geração de Layout no Backend (TSPL):** O servidor gera o comando de impressão na linguagem nativa da impressora, garantindo layouts precisos para cupons e etiquetas.
-    -   **Impressão Direta via WebUSB:** O frontend envia os comandos diretamente para a impressora USB, eliminando a necessidade de drivers complexos.
+    -   **Geração de Layout no Backend (TSPL):** O servidor gera o comando de impressão na linguagem nativa da impressora.
+    -   **Impressão Direta via WebUSB:** O frontend envia os comandos diretamente para a impressora USB.
 -   **Geração de Documentos:**
-    -   **Recibo de Venda (A4):** Geração de um PDF profissional e modernizado para recibos de venda.
+    -   **Recibo de Venda (A4):** Geração de um PDF profissional para recibos de venda.
     -   **Etiquetas de Produto:** Impressão de etiquetas com código de barras e preço.
 -   **Segurança:** Autenticação baseada em JWT com perfis de usuário (Admin, Vendedor).
 
@@ -149,3 +154,7 @@ Siga os passos abaixo para configurar e executar o projeto em seu ambiente local
 <div align="center">
   Desenvolvido por <strong>Aksurim Software</strong>
 </div>
+
+---
+
+<div align="center">Copyright © 2024 Aksurim Software. Todos os direitos reservados.</div>
